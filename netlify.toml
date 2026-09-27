@@ -1,0 +1,13 @@
+# Netlify: publikujemy folder "app". Gałąź main = wersja stabilna, gałąź test = wersja testowa (adres z "test" w nazwie).
+[build]
+  publish = "app"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"

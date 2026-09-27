@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Log treningowy</title>
+<meta name="theme-color" content="#0e7c66">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Trening">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow+Semi+Condensed:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <button class="icon-btn" id="menu-btn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="drawer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+    <h1 id="view-title">Log treningowy</h1><span class="testbadge" id="test-badge" hidden>TEST</span>
+    <button class="status off" id="status" type="button" aria-label="Stan wysyłki do arkusza">Offline</button>
+  </header>
+
+  <section id="view-home" class="view" aria-label="Start">
+    <button class="tile primary" type="button" data-go="train"><span class="t1" id="home-train-title">Zacznij trening</span><span class="t2" id="home-train-sub"></span></button>
+    <button class="tile" type="button" data-go="cal"><span class="t1">Kalendarz</span><span class="t2" id="home-cal-sub"></span></button>
+    <button class="tile" type="button" data-go="hist"><span class="t1">Historia</span><span class="t2" id="home-hist-sub"></span></button>
+    <button class="tile" type="button" data-go="plan"><span class="t1">Plan</span><span class="t2" id="home-plan-sub"></span></button>
+    <button class="btn primary" type="button" id="home-update" hidden>Jest nowa wersja aplikacji. Zaktualizuj</button>
+    <div class="sync"><span id="home-sync"></span><button class="ghost" type="button" id="home-refresh">Odśwież</button></div>
+  </section>
+
+  <section id="view-train" class="view" hidden aria-label="Trening">
+  <details class="sec" id="sec-day" open>
+    <summary><h2>Dzień</h2><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></summary>
+    <div class="body">
+      <div class="grid2 dw">
+        <div class="field"><label for="date">Data</label><input id="date" type="date" data-bind="date"></div>
+        <div class="field"><label for="waga">Waga (kg)</label><input id="waga" inputmode="decimal" data-bind="waga"></div>
+      </div>
+      <div class="field"><span class="lab" id="l-sen">Sen</span><div class="scale" data-scale="sen" role="group" aria-labelledby="l-sen"></div></div>
+      <div class="field"><span class="lab" id="l-wyr">Wyrestowanie / samopoczucie</span><div class="scale" data-scale="wyr" role="group" aria-labelledby="l-wyr"></div></div>
+      <div class="field"><span class="lab" id="l-typ">Rodzaj treningu</span><div class="chips" data-multi="types" data-options="trainingTypes" data-other="typeOther" role="group" aria-labelledby="l-typ"></div>
+        <input data-bind="typeOther" placeholder="Inne: wpisz rodzaj" aria-label="Inny rodzaj treningu" hidden data-show="types:__other"></div>
+      <div class="field"><label for="cele">Cele</label><input id="cele" data-bind="cele"></div>
+    </div>
+  </details>
+
+  <details class="sec" id="sec-warm">
+    <summary><h2>Rozgrzewka / drills</h2><span class="badge" id="badge-warm"></span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></summary>
+    <div class="body">
+      <div class="field">
+        <span class="lab" id="l-timer">Stoper rozgrzewki</span>
+        <button type="button" class="timer" id="timer" aria-labelledby="l-timer" aria-describedby="timer-hint" aria-pressed="false">
+          <span class="t" id="timer-t">00:00</span><span class="s" id="timer-s">Dotknij, żeby zacząć</span>
+        </button>
+        <p class="sub" id="timer-hint">Dotknięcie: start / pauza. Przytrzymanie: zerowanie.</p>
+        <p class="sub" id="timer-times" aria-live="polite"></p>
+      </div>
+      <div class="field"><span class="lab" id="l-drill">Drill</span><div class="chips" data-multi="warm.drills" data-options="drills" role="group" aria-labelledby="l-drill"></div></div>
+      <div class="field"><label for="w-com">Komentarz</label><input id="w-com" data-bind="warm.comment"></div>
+      <details class="sub" id="sub-manual"><summary>Ustaw godziny ręcznie<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></summary><div class="col">
+        <div class="field"><label for="w-start">Start na ścianie</label><input id="w-start" type="time" data-bind="warm.start"></div>
+        <div class="field"><label for="w-end">Koniec</label><input id="w-end" type="time" data-bind="warm.end"></div>
+      </div></details>
+    </div>
+  </details>
+
+  <section aria-label="Ćwiczenia" class="blocks" id="blocks"></section>
+
+  <section aria-label="Dodaj ćwiczenie" style="display:flex;flex-direction:column;gap:12px">
+    <button class="btn" id="addopen" type="button" aria-expanded="false">+ Dodaj ćwiczenie</button>
+    <div class="addbtns" id="addbtns" hidden></div>
+  </section>
+
+  <details class="sec" id="sec-sum">
+    <summary><h2>Podsumowanie</h2><span class="badge" id="badge-sum"></span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></summary>
+    <div class="body">
+      <div class="grp">
+        <h3>Trening 1</h3>
+        <div class="field"><label for="s-ile1">Ile trwał</label><input id="s-ile1" data-bind="sum.ile1" placeholder="np. 1:30"></div>
+        <div class="field"><label for="s-focus1">Focus na ścianie</label>
+          <select id="s-focus1" data-bind="sum.focus1" data-focus></select>
+          <input data-bind="sum.focus1Other" placeholder="Inne: wpisz focus" aria-label="Inny focus" hidden data-show="sum.focus1:__other"></div>
+        <div class="field"><label for="s-rest1">Rest między wstawkami</label><input id="s-rest1" data-bind="sum.rest1"></div>
+        <div class="field"><label for="s-prz1">Przebieg treningu</label><textarea id="s-prz1" data-bind="sum.przebieg1"></textarea></div>
+      </div>
+      <div class="grp">
+        <details class="sub" id="sub-t2"><summary>Trening 2 (jeśli był)<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></summary><div class="col">
+        <div class="field"><label for="s-ile2">Ile trwał</label><input id="s-ile2" data-bind="sum.ile2" placeholder="np. 1:00"></div>
+        <div class="field"><label for="s-focus2">Focus na ścianie</label>
+          <select id="s-focus2" data-bind="sum.focus2" data-focus></select>
+          <input data-bind="sum.focus2Other" placeholder="Inne: wpisz focus" aria-label="Inny focus" hidden data-show="sum.focus2:__other"></div>
+        <div class="field"><label for="s-rest2">Rest między wstawkami</label><input id="s-rest2" data-bind="sum.rest2"></div>
+        <div class="field"><label for="s-prz2">Przebieg treningu</label><textarea id="s-prz2" data-bind="sum.przebieg2"></textarea></div>
+        </div></details>
+      </div>
+      <div class="grp">
+        <h3>Intensywność</h3>
+        <div class="field"><span class="lab" id="l-int">Subiektywnie</span><p class="sub" id="int-hint"></p><div class="scale" data-scale="sum.intSubj" role="group" aria-labelledby="l-int"></div></div>
+      </div>
+      <div class="grp">
+        <h3>Jak było</h3>
+        <div class="field"><span class="lab" id="l-fiz">Jak się czułem fizycznie?</span><div class="scale" data-scale="sum.fiz" role="group" aria-labelledby="l-fiz"></div></div>
+        <div class="field"><span class="lab" id="l-jak">Jak było jakościowo?</span><div class="scale" data-scale="sum.jak" role="group" aria-labelledby="l-jak"></div></div>
+        <div class="field"><span class="lab" id="l-chk">Focus check lista</span><div class="chips" data-multi="sum.check" data-options="focusCheck" role="group" aria-labelledby="l-chk"></div></div>
+        <div class="field"><label for="s-suk">Sukcesy</label><textarea id="s-suk" data-bind="sum.sukcesy"></textarea></div>
+        <div class="field"><label for="s-sla">Słabe strony</label><textarea id="s-sla" data-bind="sum.slabe"></textarea></div>
+        <div class="field"><label for="s-kom">Komentarz po sesji</label><textarea id="s-kom" data-bind="sum.komentarz"></textarea></div>
+      </div>
+    </div>
+  </details>
+
+  <button class="btn primary big" id="save" type="button">Zapisz trening</button>
+  </section>
+
+  <section id="view-cal" class="view" hidden aria-label="Kalendarz"></section>
+  <section id="view-hist" class="view" hidden aria-label="Historia"></section>
+  <section id="view-plan" class="view" hidden aria-label="Plan makro"></section>
+</div>
+
+<div id="drawer-back" hidden></div>
+<nav id="drawer" hidden aria-label="Menu główne">
+  <button type="button" data-go="home">Start</button>
+  <button type="button" data-go="train">Zacznij trening</button>
+  <button type="button" data-go="cal">Kalendarz</button>
+  <button type="button" data-go="hist">Historia</button>
+  <button type="button" data-go="plan">Plan</button>
+  <button type="button" id="drawer-settings" class="alt">Ustawienia</button>
+</nav>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<dialog id="settings">
+  <form method="dialog" id="settings-form">
+    <h2>Ustawienia</h2>
+    <div class="field"><label for="cfg-url">Adres skryptu (Apps Script)</label><input id="cfg-url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <div class="field"><label for="cfg-token">Hasło skryptu</label><input id="cfg-token" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <div class="field"><label for="cfg-theme">Motyw</label>
+      <select id="cfg-theme"><option value="auto">Jak w telefonie</option><option value="light">Jasny</option><option value="dark">Ciemny</option></select></div>
+    <p class="msg" id="cfg-msg" hidden></p>
+    <div class="grid2">
+      <button class="btn" type="button" id="cfg-test">Testuj połączenie</button>
+      <button class="btn" type="button" id="cfg-hist">Odśwież dane</button>
+    </div>
+    <button class="btn" type="button" id="cfg-copylink">Skopiuj link na inne urządzenie</button>
+    <p class="sub">Otwórz ten link na komputerze, a aplikacja połączy się z arkuszem bez wpisywania hasła. Link zawiera Twoje hasło, więc nie wysyłaj go nikomu.</p>
+    <button class="btn" type="button" id="cfg-clear">Wyczyść formularz</button>
+    <button class="btn" type="button" id="cfg-wipe">Usuń dane z tego urządzenia</button>
+    <p class="sub" id="cfg-ver"></p>
+    <button class="btn primary" type="submit" id="cfg-close">Zapisz i zamknij</button>
+  </form>
+</dialog>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script src="views.js"></script>
+</body>
+</html>
