@@ -574,6 +574,10 @@
   function openSettings() {
     $('#cfg-url').value = cfg.url || ''; $('#cfg-token').value = cfg.token || ''; $('#cfg-theme').value = cfg.theme || 'auto';
     $('#cfg-ver').textContent = 'Wersja aplikacji: ' + (C.version || '?') + (isTest ? ' (TEST)' : '');
+    $('#cfg-changelog-body').innerHTML = (C.changelog || []).map(function (e) {
+      return '<p class="sub" style="margin:.6em 0 .2em;font-weight:600">' + esc(e.v) + '</p><ul class="sub" style="margin:0 0 .6em 1.1em;padding:0">' +
+        e.items.map(function (it) { return '<li>' + esc(it) + '</li>'; }).join('') + '</ul>';
+    }).join('');
     $('#cfg-msg').hidden = true; dlg.showModal();
   }
   function msg(text, err) { var m = $('#cfg-msg'); m.textContent = text; m.className = 'msg' + (err ? ' err' : ''); m.hidden = false; }
