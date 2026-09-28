@@ -1,5 +1,5 @@
 /* Service worker: aplikacja działa bez internetu. Zmień VERSION przy każdej aktualizacji plików (razem z version w config.js). */
-var VERSION = 'lt-2026.09.28-4';
+var VERSION = 'lt-2026.09.28-5';
 var CACHE = VERSION + '@' + self.registration.scope;   // osobna pamięć dla każdej kopii aplikacji (stabilna, testowa)
 var SHELL = ['./', 'index.html', 'style.css', 'app.js', 'views.js', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
