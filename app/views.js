@@ -33,22 +33,37 @@
     }
     return out;
   }
-  var exCache = null, exKey = '';
-  function exerciseList() {
+  var exAllCache = null, exAllKey = '';
+  function exBaseMap() {
+    // Wszystkie ćwiczenia z całej historii (nazwa, ręce) - lista nazw się nie zmienia przy zmianie zakresu dat.
     var all = LT.trainings(), key = all.length + '|' + (all.length ? all[all.length - 1].d : '');
-    if (exCache && key === exKey) return exCache;
+    if (exAllCache && key === exAllKey) return exAllCache;
     var m = {};
     all.forEach(function (t) {
-      var seen = {};
       t.b.forEach(function (b) {
         if (!b.n) return;
-        var base = baseOf(b.n), e = m[base] || (m[base] = { name: base, n: 0, sides: {} });
-        if (!seen[base]) { e.n++; seen[base] = 1; }
+        var base = baseOf(b.n), e = m[base] || (m[base] = { name: base, sides: {} });
         e.sides[sideOf(b.n)] = 1;
       });
     });
-    exCache = Object.keys(m).map(function (k) { return m[k]; }).sort(function (a, b) { return b.n - a.n || (a.name < b.name ? -1 : 1); });
-    exKey = key; return exCache;
+    exAllCache = m; exAllKey = key; return exAllCache;
+  }
+  // from/to (opcjonalne, YYYY-MM-DD): liczba (n) to treningi z danym ćwiczeniem W TYM przedziale.
+  // Bez from/to: liczba ze wszystkich treningów. Lista nazw zawsze z całej historii (żeby wybór nie znikał przy zawężaniu dat).
+  function exerciseList(from, to) {
+    var base = exBaseMap(), trainings = LT.trainings();
+    if (from || to) trainings = trainings.filter(function (t) { return (!from || t.d >= from) && (!to || t.d <= to); });
+    var counts = {};
+    trainings.forEach(function (t) {
+      var seen = {};
+      t.b.forEach(function (b) {
+        if (!b.n) return;
+        var name = baseOf(b.n);
+        if (!seen[name]) { counts[name] = (counts[name] || 0) + 1; seen[name] = 1; }
+      });
+    });
+    return Object.keys(base).map(function (k) { return { name: base[k].name, sides: base[k].sides, n: counts[k] || 0 }; })
+      .sort(function (a, b) { return b.n - a.n || (a.name < b.name ? -1 : 1); });
   }
 
   /* ---------- miary ---------- */
@@ -332,7 +347,7 @@
     var body = $('#hist-body'), ex = H.ex;
     var all = LT.trainings().filter(function (t) { return t.d >= H.from && t.d <= H.to && (!ex || t.b.some(function (b) { return b.n && baseOf(b.n) === ex; })); });
     all.sort(function (a, b) { return a.d < b.d ? 1 : a.d > b.d ? -1 : ((b.ts || '') < (a.ts || '') ? -1 : 1); });
-    var opts = '<option value="">Wszystkie ćwiczenia</option>' + exerciseList().map(function (e) { return '<option value="' + esc(e.name) + '"' + (e.name === ex ? ' selected' : '') + '>' + esc(e.name) + ' (' + e.n + '×)</option>'; }).join('');
+    var opts = '<option value="">Wszystkie ćwiczenia</option>' + exerciseList(H.from, H.to).map(function (e) { return '<option value="' + esc(e.name) + '"' + (e.name === ex ? ' selected' : '') + '>' + esc(e.name) + ' (' + e.n + '×)</option>'; }).join('');
     var h = '<div class="field"><label for="h-ex">Filtr: ćwiczenie</label><select id="h-ex">' + opts + '</select></div>' +
       '<p class="sub-title" aria-live="polite">' + all.length + ' ' + LT.plural(all.length, 'trening', 'treningi', 'treningów') + ' w wybranym okresie' + (ex ? ' z ćwiczeniem „' + esc(ex) + '”' : '') + '</p>';
     if (!all.length) h += '<div class="card"><p class="empty-msg">Brak treningów w tym przedziale. Zmień daty albo wybierz „Wszystko”.</p></div>';
@@ -344,7 +359,7 @@
   /* --- wykres --- */
   function serCard(key) {
     var s = H[key]; if (!s) return '';
-    var exs = exerciseList(), cur = exs.filter(function (e) { return e.name === s.ex; })[0];
+    var exs = exerciseList(H.from, H.to), cur = exs.filter(function (e) { return e.name === s.ex; })[0];
     var h = '<div class="card ser" data-s="' + key + '"><div class="head"><h3><i class="sw" style="background:' + (key === 'A' ? 'var(--sA)' : 'var(--sB)') + (key === 'B' ? ';border-radius:2px' : '') + '"></i>' + (key === 'A' ? 'Seria A' : 'Porównaj z') + '</h3>' + (key === 'B' ? '<button type="button" class="ghost" data-act="rm-b">Usuń</button>' : '') + '</div>';
     h += '<div class="field"><label for="' + key + '-kind">Co pokazać</label><select id="' + key + '-kind" data-k="kind"><option value="ex"' + (s.kind === 'ex' ? ' selected' : '') + '>Ćwiczenie</option><option value="var"' + (s.kind === 'var' ? ' selected' : '') + '>Zmienna z logu (sen, waga, intensywność…)</option></select></div>';
     if (s.kind === 'var') {
