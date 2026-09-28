@@ -1,10 +1,11 @@
 /* Konfiguracja aplikacji: listy opcji z formularza Google i układ arkusza.
    Tu edytujesz domyślne listy ćwiczeń i opcji. Zmiany widać po odświeżeniu aplikacji. */
 window.LT_CONFIG = {
-  version: '2026.09.28-9',   // numer wersji (zmieniany przy każdym wydaniu razem z sw.js)
+  version: '2026.09.28-10',   // numer wersji (zmieniany przy każdym wydaniu razem z sw.js)
   // Co nowego: najnowsza wersja na górze. "v" to tylko etykieta widoczna w apce (nie musi być identyczna z "version" wyżej).
   changelog: [
     { v: '28.09.2026', items: [
+      'Filtry: rząd (np. Urządzenie) nie znika już, gdy zostaje tylko jedna opcja — widać go i można go kliknąć.',
       'Wybór ćwiczenia (Palce): dodany filtr „Urządzenie” (np. BM2K, dom) obok Ćwiczenie/Liczba palców/Chwyt/Krawądka — działa też w Historii i Wykresie.',
       'Ustawienia: przycisk „Sprawdź aktualizację teraz” — pewniejszy niż czekanie, aż telefon sam zauważy nową wersję.',
       'Wybór ćwiczenia: szukajka i filtry (Ćwiczenie / Liczba palców / Chwyt / Krawądka dla Palce, Pull/Push/Inne dla Siłki) zamiast jednej długiej listy. Filtry kaskadowe: wybór zawęża pozostałe opcje.',

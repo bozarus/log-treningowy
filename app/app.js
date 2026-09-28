@@ -395,7 +395,7 @@
       var seen = {}, opts = [];
       cand.forEach(function (n) { var v = facetOf(b.cat, n, key); if (v && !seen[v]) { seen[v] = 1; opts.push(v); } });
       return { key: key, label: label, options: opts };
-    }).filter(function (r) { return r.options.length > 1 || (r.options.length === 1 && exFilters[r.key] != null); });
+    }).filter(function (r) { return r.options.length >= 1; });
   }
   function exMatches(b, n, q) {
     if (q && n.toLowerCase().indexOf(q) === -1) return false;

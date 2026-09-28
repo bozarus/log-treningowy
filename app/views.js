@@ -69,7 +69,7 @@
       var seen = {}, opts = [];
       cand.forEach(function (n) { var v = facetOf(cat, n, key); if (v && !seen[v]) { seen[v] = 1; opts.push(v); } });
       return { key: key, label: label, options: opts };
-    }).filter(function (r) { return r.options.length > 1 || (r.options.length === 1 && filters[r.key] != null); });
+    }).filter(function (r) { return r.options.length >= 1; });
   }
   function facetMatchAll(cat, n, filters) {
     return Object.keys(filters).every(function (k) { return facetOf(cat, n, k) === filters[k]; });
