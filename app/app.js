@@ -38,6 +38,16 @@
   state.blocks.forEach(function (b) { if (b.id >= uid) uid = b.id + 1; });
 
   var custom = lsGet('lt-custom', { palce: [], silka: [] });
+  (function migrateLegacyPalceNames() {
+    var map = C.legacyPalceRename || {}; if (!Object.keys(map).length) return;
+    var list = custom.palce || [], out = [], changed = false;
+    list.forEach(function (n) {
+      var nn = Object.prototype.hasOwnProperty.call(map, n) ? map[n] : n;
+      if (nn !== n) changed = true;
+      if (out.indexOf(nn) === -1) out.push(nn);
+    });
+    if (changed) { custom.palce = out; lsSet('lt-custom', custom); pushState(); }
+  })();
   function listFor(cat) { return C.exercises[cat].concat((custom[cat] || []).filter(function (n) { return C.exercises[cat].indexOf(n) === -1; })); }
   var cfg = lsGet('lt-cfg', { url: '', token: '', theme: 'auto' });
 
