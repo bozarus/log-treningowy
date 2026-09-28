@@ -347,7 +347,7 @@
     var body = $('#hist-body'), ex = H.ex;
     var all = LT.trainings().filter(function (t) { return t.d >= H.from && t.d <= H.to && (!ex || t.b.some(function (b) { return b.n && baseOf(b.n) === ex; })); });
     all.sort(function (a, b) { return a.d < b.d ? 1 : a.d > b.d ? -1 : ((b.ts || '') < (a.ts || '') ? -1 : 1); });
-    var opts = '<option value="">Wszystkie ćwiczenia</option>' + exerciseList(H.from, H.to).map(function (e) { return '<option value="' + esc(e.name) + '"' + (e.name === ex ? ' selected' : '') + '>' + esc(e.name) + ' (' + e.n + '×)</option>'; }).join('');
+    var opts = '<option value="">Wszystkie ćwiczenia</option>' + exerciseList(H.from, H.to).map(function (e) { return '<option value="' + esc(e.name) + '"' + (e.name === ex ? ' selected' : '') + '>' + esc(e.name) + (e.n ? ' (' + e.n + '×)' : '') + '</option>'; }).join('');
     var h = '<div class="field"><label for="h-ex">Filtr: ćwiczenie</label><select id="h-ex">' + opts + '</select></div>' +
       '<p class="sub-title" aria-live="polite">' + all.length + ' ' + LT.plural(all.length, 'trening', 'treningi', 'treningów') + ' w wybranym okresie' + (ex ? ' z ćwiczeniem „' + esc(ex) + '”' : '') + '</p>';
     if (!all.length) h += '<div class="card"><p class="empty-msg">Brak treningów w tym przedziale. Zmień daty albo wybierz „Wszystko”.</p></div>';
@@ -365,7 +365,7 @@
     if (s.kind === 'var') {
       h += '<div class="field"><label for="' + key + '-v">Zmienna</label><select id="' + key + '-v" data-k="v">' + VARS.map(function (v) { return '<option value="' + v.id + '"' + (v.id === s.v ? ' selected' : '') + '>' + esc(v.label) + '</option>'; }).join('') + '</select></div>';
     } else {
-      h += '<div class="field"><label for="' + key + '-ex">Ćwiczenie</label><select id="' + key + '-ex" data-k="ex">' + exs.map(function (e) { return '<option value="' + esc(e.name) + '"' + (e.name === s.ex ? ' selected' : '') + '>' + esc(e.name) + ' (' + e.n + '×)</option>'; }).join('') + '</select></div>';
+      h += '<div class="field"><label for="' + key + '-ex">Ćwiczenie</label><select id="' + key + '-ex" data-k="ex">' + exs.map(function (e) { return '<option value="' + esc(e.name) + '"' + (e.name === s.ex ? ' selected' : '') + '>' + esc(e.name) + (e.n ? ' (' + e.n + '×)' : '') + '</option>'; }).join('') + '</select></div>';
       var sides = cur ? Object.keys(cur.sides) : [];
       if (sides.length > 1) {
         var so = [['all', 'Wszystkie zapisy']]; ['prawa', 'lewa', 'obie'].forEach(function (x) { if (cur.sides[x]) so.push([x, x === 'obie' ? 'Obie ręce (bez podziału)' : x === 'prawa' ? 'Tylko prawa ręka' : 'Tylko lewa ręka']); });
