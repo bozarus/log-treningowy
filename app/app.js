@@ -696,6 +696,7 @@
     var showUpdate = function () { $('#home-update').hidden = false; };
     navigator.serviceWorker.register('sw.js').then(function (reg) {
       swReg = reg;
+      reg.update().catch(function () {});
       if (reg.waiting && navigator.serviceWorker.controller) showUpdate();
       reg.addEventListener('updatefound', function () {
         var w = reg.installing; if (!w) return;

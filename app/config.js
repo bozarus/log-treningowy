@@ -1,7 +1,7 @@
 /* Konfiguracja aplikacji: listy opcji z formularza Google i układ arkusza.
    Tu edytujesz domyślne listy ćwiczeń i opcji. Zmiany widać po odświeżeniu aplikacji. */
 window.LT_CONFIG = {
-  version: '2026.09.28-1',   // numer wersji (zmieniany przy każdym wydaniu razem z sw.js)
+  version: '2026.09.28-2',   // numer wersji (zmieniany przy każdym wydaniu razem z sw.js)
   // Ćwiczenia bez rozróżnienia rąk w nazwie. Nowe ćwiczenia dodajesz w aplikacji ("+ Nowe ćwiczenie…").
   exercises: {
     palce: [
