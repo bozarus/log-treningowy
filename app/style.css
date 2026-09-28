@@ -91,7 +91,15 @@ input[inputmode=decimal],input[inputmode=numeric]{font-family:var(--f-disp);font
 .bh{display:flex;gap:8px;align-items:center}
 .cat{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:600}
 .flag{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;background:var(--diff-bg);color:var(--diff);border:1px solid var(--diff-line);border-radius:999px;padding:2px 8px;white-space:nowrap;margin-inline-start:auto}
-.exsel{min-height:52px;font-family:var(--f-disp);font-size:24px;font-weight:600}
+.exsel{min-height:52px;font-family:var(--f-disp);font-size:24px;font-weight:600;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.exsel::after{content:"";flex:none;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-inline-end:4px}
+.exsel .ph{color:var(--muted);font-weight:500;font-size:19px}
+#exfilters{display:flex;flex-direction:column;gap:8px}
+.exfrow>.lbl{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin-bottom:4px;display:block}
+.exlist{display:flex;flex-direction:column;gap:6px;max-height:42vh;overflow:auto}
+.exlist button{min-height:52px;text-align:left;border:1px solid var(--line);background:var(--raise);border-radius:10px;padding-inline:14px;font-size:16px;font-weight:600}
+.exlist button[data-new]{color:var(--accent)}
+.exlist .exempty{color:var(--muted);font-size:15px;padding:8px 4px}
 .seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .seg button{min-height:44px;font-size:16px}
 .seg button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}

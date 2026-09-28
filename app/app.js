@@ -238,11 +238,8 @@
       '<button class="x" type="button" data-act="rm-set" aria-label="Usuń serię ' + (i + 1) + '">×</button></div>';
   }
   function selectHTML(b) {
-    var names = listFor(b.cat); if (b.name && names.indexOf(b.name) === -1) names = names.concat([b.name]);
-    var h = '<select class="exsel" id="e' + b.id + '" aria-label="Ćwiczenie">';
-    if (!b.name) h += '<option value="" selected disabled>Wybierz ćwiczenie…</option>';
-    names.forEach(function (n) { h += '<option' + (n === b.name ? ' selected' : '') + '>' + esc(n) + '</option>'; });
-    return h + '<option value="__new">+ Nowe ćwiczenie…</option></select>';
+    return '<button type="button" class="exsel" id="e' + b.id + '" data-act="pick-ex" aria-haspopup="dialog">' +
+      (b.name ? esc(b.name) : '<span class="ph">Wybierz ćwiczenie…</span>') + '</button>';
   }
   function lastHTML(b) {
     var h = b.name ? lastFor(sheetName(b)) : null; if (!h || !h.reps || !h.reps.length) return '';
@@ -316,12 +313,6 @@
     } else return;
     scheduleSave();
   });
-  host.addEventListener('change', function (e) {
-    if (!e.target.classList.contains('exsel')) return;
-    var el = e.target.closest('.block'), b = findBlock(+el.dataset.id), ne = $('.newex', el);
-    if (e.target.value === '__new') { ne.hidden = false; $('.newname', el).focus(); }
-    else { b.name = e.target.value; scheduleSave(); rerender(b); }
-  });
   host.addEventListener('focusout', function (e) {
     if (e.target.classList.contains('kg')) { var el = e.target.closest('.block'); if (el) patch(findBlock(+el.dataset.id)); }
   });
@@ -352,6 +343,8 @@
       var cat = t.dataset.v; if (cat === b.cat) return;
       if (count(cat) >= C.limits[cat]) { toast('W arkuszu jest miejsce na ' + C.limits[cat] + ' bloków „' + CATN[cat] + '”.', true); return; }
       b.cat = cat; rerender(b); renderAdd();
+    } else if (a === 'pick-ex') {
+      openExPicker(b); return;
     } else if (a === 'new-ok') {
       var inp = $('.newname', el), n = inp.value.trim(); if (!n) { inp.focus(); return; }
       if (listFor(b.cat).indexOf(n) === -1) { custom[b.cat].push(n); lsSet('lt-custom', custom); pushState(); }
@@ -366,6 +359,75 @@
       normalize(b); rerender(b);
     } else return;
     scheduleSave();
+  });
+
+  /* ---------- wybór ćwiczenia: szukajka + filtry ---------- */
+  var exPickBlock = null, exFilters = {};
+  function exGroups(b) {
+    var names = listFor(b.cat);
+    if (b.cat === 'palce') {
+      var F = C.palceFacets || {};
+      return [
+        { key: 'cwiczenie', label: 'Ćwiczenie' },
+        { key: 'liczba', label: 'Liczba palców' },
+        { key: 'chwyt', label: 'Chwyt' },
+        { key: 'krawadka', label: 'Krawądka' }
+      ].map(function (r) {
+        var seen = {}, opts = [];
+        names.forEach(function (n) { var f = F[n], v = f && f[r.key]; if (v && !seen[v]) { seen[v] = 1; opts.push(v); } });
+        return { key: r.key, label: r.label, options: opts };
+      }).filter(function (r) { return r.options.length > 1; });
+    }
+    var G = C.silkaGroups || {}, seen = {}, opts = [];
+    names.forEach(function (n) { var v = G[n] || 'Inne'; if (!seen[v]) { seen[v] = 1; opts.push(v); } });
+    return opts.length > 1 ? [{ key: 'grupa', label: 'Rodzaj', options: opts }] : [];
+  }
+  function exMatches(b, n, q) {
+    if (q && n.toLowerCase().indexOf(q) === -1) return false;
+    var keys = Object.keys(exFilters); if (!keys.length) return true;
+    if (b.cat === 'palce') {
+      var f = (C.palceFacets || {})[n];
+      return keys.every(function (k) { return f && f[k] === exFilters[k]; });
+    }
+    var grupa = (C.silkaGroups || {})[n] || 'Inne';
+    return keys.every(function (k) { return grupa === exFilters[k]; });
+  }
+  function renderExFilters(b) {
+    var rows = exGroups(b);
+    $('#exfilters').innerHTML = rows.map(function (r) {
+      return '<div class="exfrow"><span class="lbl">' + esc(r.label) + '</span><div class="chips">' +
+        r.options.map(function (o) { return '<button type="button" data-k="' + esc(r.key) + '" data-v="' + esc(o) + '" aria-pressed="' + (exFilters[r.key] === o) + '">' + esc(o) + '</button>'; }).join('') +
+        '</div></div>';
+    }).join('');
+  }
+  function renderExList(b) {
+    var q = $('#exq').value.trim().toLowerCase();
+    var names = listFor(b.cat).filter(function (n) { return exMatches(b, n, q); });
+    var h = names.map(function (n) { return '<button type="button" data-name="' + esc(n) + '">' + esc(n) + '</button>'; }).join('');
+    if (!names.length) h += '<p class="exempty">Nic nie pasuje — spróbuj mniej filtrów.</p>';
+    h += '<button type="button" data-new="1">+ Nowe ćwiczenie…</button>';
+    $('#exlist').innerHTML = h;
+  }
+  function openExPicker(b) {
+    exPickBlock = b; exFilters = {};
+    $('#exq').value = '';
+    renderExFilters(b); renderExList(b);
+    $('#exdlg').showModal();
+    setTimeout(function () { $('#exq').focus(); }, 50);
+  }
+  $('#exq').addEventListener('input', function () { if (exPickBlock) renderExList(exPickBlock); });
+  $('#exfilters').addEventListener('click', function (e) {
+    var t = e.target.closest('button[data-k]'); if (!t || !exPickBlock) return;
+    var k = t.dataset.k, v = t.dataset.v;
+    if (exFilters[k] === v) delete exFilters[k]; else exFilters[k] = v;
+    renderExFilters(exPickBlock); renderExList(exPickBlock);
+  });
+  $('#exlist').addEventListener('click', function (e) {
+    var t = e.target.closest('button'); if (!t || !exPickBlock) return;
+    var b = exPickBlock;
+    $('#exdlg').close();
+    if (t.dataset.new) { var el = blockEl(b.id), ne = $('.newex', el); ne.hidden = false; $('.newname', el).focus(); return; }
+    b.name = t.dataset.name; scheduleSave(); rerender(b);
   });
 
   /* ---------- add exercise ---------- */
@@ -517,12 +579,9 @@
     });
   });
 
-  function refreshSelects() {
-    state.blocks.forEach(function (b) {
-      var el = blockEl(b.id), sel = el && $('.exsel', el); if (!sel) return;
-      var tmp = document.createElement('div'); tmp.innerHTML = selectHTML(b); sel.innerHTML = $('select', tmp).innerHTML;
-    });
-  }
+  // Lista ćwiczeń do wyboru liczy się na bieżąco przy otwarciu okna wyboru (openExPicker),
+  // więc po odświeżeniu danych z arkusza nie trzeba nic przebudowywać w samych blokach.
+  function refreshSelects() {}
   function refreshHints() {
     state.blocks.forEach(function (b) {
       var el = blockEl(b.id); if (!el) return;

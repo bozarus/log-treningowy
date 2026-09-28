@@ -1,10 +1,11 @@
 /* Konfiguracja aplikacji: listy opcji z formularza Google i układ arkusza.
    Tu edytujesz domyślne listy ćwiczeń i opcji. Zmiany widać po odświeżeniu aplikacji. */
 window.LT_CONFIG = {
-  version: '2026.09.28-5',   // numer wersji (zmieniany przy każdym wydaniu razem z sw.js)
+  version: '2026.09.28-6',   // numer wersji (zmieniany przy każdym wydaniu razem z sw.js)
   // Co nowego: najnowsza wersja na górze. "v" to tylko etykieta widoczna w apce (nie musi być identyczna z "version" wyżej).
   changelog: [
     { v: '28.09.2026', items: [
+      'Wybór ćwiczenia: szukajka i filtry (Ćwiczenie / Liczba palców / Chwyt / Krawądka dla Palce, Pull/Push/Inne dla Siłki) zamiast jednej długiej listy.',
       'Nowe, uporządkowane nazwy ćwiczeń Palce (historia w arkuszu też przepisana na nowe nazwy).',
       'Historia: liczba przy nazwie ćwiczenia pokazuje teraz treningi z wybranego zakresu dat (nie z całej historii); ćwiczenia bez wystąpień w zakresie są bez liczby.',
       'Naprawiona instalacja aplikacji na telefonie (przycisk „Zainstaluj” nie działał w niektórych przeglądarkach).'
@@ -96,6 +97,50 @@ window.LT_CONFIG = {
     'Pulls half 17mm prawa': 'Pulls 4p half crimp 17mm',
     'Pulls half 17mm': 'Pulls 4p half crimp 17mm',
     'Wrist wrench P i L': 'Wrist wrench'
+  },
+  // Rozbicie nazw ćwiczeń Palce na cechy (do filtrowania w wyborze ćwiczenia). Ćwiczenia spoza
+  // tej listy (dodane własnoręcznie) nie mają cech — nie zostaną odfiltrowane, gdy nic nie wybierzesz.
+  palceFacets: {
+    "Max Hangs 4p open 10mm": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "open", krawadka: "10mm", urzadzenie: "dom" },
+    "Max Hangs 4p open 8mm": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "open", krawadka: "8mm", urzadzenie: null },
+    "Pulls 3p open": { cwiczenie: "Pulls", liczba: "3p", chwyt: "open", krawadka: null, urzadzenie: null },
+    "Pulls 4p open asym": { cwiczenie: "Pulls", liczba: "4p", chwyt: "open", krawadka: "asym", urzadzenie: null },
+    "Max Hangs 4p half crimp asym": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "half crimp", krawadka: "asym", urzadzenie: null },
+    "Max Hangs 4p open asym": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "open", krawadka: "asym", urzadzenie: null },
+    "Repeaters 5:10 4p half crimp asym": { cwiczenie: "Repeaters 5:10", liczba: "4p", chwyt: "half crimp", krawadka: "asym", urzadzenie: null },
+    "Repeaters 5:10 4p open asym": { cwiczenie: "Repeaters 5:10", liczba: "4p", chwyt: "open", krawadka: "asym", urzadzenie: null },
+    "Repeaters 6:10 4p open 17mm": { cwiczenie: "Repeaters 6:10", liczba: "4p", chwyt: "open", krawadka: "17mm", urzadzenie: null },
+    "Repeaters 6:10 4p open 20mm": { cwiczenie: "Repeaters 6:10", liczba: "4p", chwyt: "open", krawadka: "20mm", urzadzenie: "BM2K" },
+    "Repeaters 6:10 3p open asym": { cwiczenie: "Repeaters 6:10", liczba: "3p", chwyt: "open", krawadka: "asym", urzadzenie: null },
+    "Repeaters 6:10 b3 half crimp asym": { cwiczenie: "Repeaters 6:10", liczba: "b3", chwyt: "half crimp", krawadka: "asym", urzadzenie: null },
+    "Repeaters 6:10 3p (bez środkowego) half crimp asym": { cwiczenie: "Repeaters 6:10", liczba: "3p (bez środkowego)", chwyt: "half crimp", krawadka: "asym", urzadzenie: null },
+    "Repeaters 6:10 4p half crimp 17mm": { cwiczenie: "Repeaters 6:10", liczba: "4p", chwyt: "half crimp", krawadka: "17mm", urzadzenie: null },
+    "Repeaters 7:3 4p open Campus XL": { cwiczenie: "Repeaters 7:3", liczba: "4p", chwyt: "open", krawadka: "Campus XL", urzadzenie: null },
+    "Repeaters 7:3 3p open asym": { cwiczenie: "Repeaters 7:3", liczba: "3p", chwyt: "open", krawadka: "asym", urzadzenie: null },
+    "Repeaters 7:3 4p open asym": { cwiczenie: "Repeaters 7:3", liczba: "4p", chwyt: "open", krawadka: "asym", urzadzenie: null },
+    "Repeaters 7:3 3p (bez środkowego) half crimp asym": { cwiczenie: "Repeaters 7:3", liczba: "3p (bez środkowego)", chwyt: "half crimp", krawadka: "asym", urzadzenie: null },
+    "Max Hangs 4p open 20mm": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "open", krawadka: "20mm", urzadzenie: "BM2K" },
+    "Campus po drewnie": { cwiczenie: "Campus po drewnie", liczba: null, chwyt: null, krawadka: null, urzadzenie: null },
+    "Campus z ziemi": { cwiczenie: "Campus z ziemi", liczba: null, chwyt: null, krawadka: null, urzadzenie: null },
+    "Density 4p 15mm": { cwiczenie: "Density", liczba: "4p", chwyt: null, krawadka: "15mm", urzadzenie: "dom" },
+    "Density 4p 20mm": { cwiczenie: "Density", liczba: "4p", chwyt: null, krawadka: "20mm", urzadzenie: "dom" },
+    "Density 4p half crimp 17mm": { cwiczenie: "Density", liczba: "4p", chwyt: "half crimp", krawadka: "17mm", urzadzenie: null },
+    "Density 4p half crimp asym": { cwiczenie: "Density", liczba: "4p", chwyt: "half crimp", krawadka: "asym", urzadzenie: null },
+    "Max Hangs 4p open 15mm": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "open", krawadka: "15mm", urzadzenie: "dom" },
+    "Max Hangs 4p open 17mm": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "open", krawadka: "17mm", urzadzenie: null },
+    "Max Hangs 4p half crimp 17mm": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "half crimp", krawadka: "17mm", urzadzenie: null },
+    "Pulls 4p open 17mm": { cwiczenie: "Pulls", liczba: "4p", chwyt: "open", krawadka: "17mm", urzadzenie: null },
+    "Pulls 4p half crimp 17mm": { cwiczenie: "Pulls", liczba: "4p", chwyt: "half crimp", krawadka: "17mm", urzadzenie: null },
+    "Wrist wrench": { cwiczenie: "Wrist wrench", liczba: null, chwyt: null, krawadka: null, urzadzenie: null }
+  },
+  // Grupa ćwiczeń Siłka (do filtrowania w wyborze ćwiczenia). Spoza tej listy = "Inne".
+  silkaGroups: {
+    'Archer pullups': 'Pull', 'Finger rolls sztangą': 'Inne', 'Hantle na skosie': 'Push',
+    'OHP': 'Push', 'One arm inverted row prawa': 'Pull', 'One arm inverted row lewa': 'Pull',
+    'Podciągi normalne': 'Pull', 'Podciągi podchwytem': 'Pull', 'Podciągi szeroko': 'Pull',
+    'Podciągi do klaty': 'Pull', 'Przyblok prawa': 'Pull', 'Przyblok lewa': 'Pull',
+    'Wiosłowanie': 'Pull', 'Wiosłowanie jednorącz': 'Pull', 'Wyciskanie sztangi płasko': 'Push',
+    'Martwy ciąg': 'Inne'
   },
   // Jak nazwa ćwiczenia wygląda w arkuszu, gdy wybierzesz tylko prawą lub lewą rękę.
   // Od reorganizacji nazw (wrzesień 2026) nowe nazwy ćwiczeń Palce nie mają już strony w nazwie
