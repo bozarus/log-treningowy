@@ -381,7 +381,7 @@
   }
   function facetDefs(cat) {
     return cat === 'palce'
-      ? [['cwiczenie', 'Ćwiczenie'], ['liczba', 'Liczba palców'], ['chwyt', 'Chwyt'], ['krawadka', 'Krawądka']]
+      ? [['cwiczenie', 'Ćwiczenie'], ['liczba', 'Liczba palców'], ['chwyt', 'Chwyt'], ['krawadka', 'Krawądka'], ['urzadzenie', 'Urządzenie']]
       : [['grupa', 'Rodzaj']];
   }
   // Kaskadowo: opcje w wierszu liczą się z ćwiczeń pasujących do POZOSTAŁYCH już wybranych filtrów

@@ -57,7 +57,7 @@
     return null;
   }
   function facetDefsFor(cat) {
-    return cat === 'palce' ? [['cwiczenie', 'Ćwiczenie'], ['liczba', 'Liczba palców'], ['chwyt', 'Chwyt'], ['krawadka', 'Krawądka']]
+    return cat === 'palce' ? [['cwiczenie', 'Ćwiczenie'], ['liczba', 'Liczba palców'], ['chwyt', 'Chwyt'], ['krawadka', 'Krawądka'], ['urzadzenie', 'Urządzenie']]
       : cat === 'silka' ? [['grupa', 'Rodzaj']] : [];
   }
   // Kaskadowo: opcje w wierszu liczą się z ćwiczeń pasujących do POZOSTAŁYCH już wybranych filtrów.
