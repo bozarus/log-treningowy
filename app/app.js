@@ -361,36 +361,45 @@
     scheduleSave();
   });
 
-  /* ---------- wybór ćwiczenia: szukajka + filtry ---------- */
+  /* ---------- wybór ćwiczenia: szukajka + kaskadowe filtry ---------- */
   var exPickBlock = null, exFilters = {};
+  // Wszystkie ćwiczenia, które kiedykolwiek pojawiły się w historii (nie tylko podpowiedzi/własne).
+  function historyNames(cat) {
+    var seen = {}, out = [];
+    trainings().forEach(function (t) { t.b.forEach(function (bl) { if (bl.c === cat && bl.n && !seen[bl.n]) { seen[bl.n] = 1; out.push(bl.n); } }); });
+    return out;
+  }
+  function allNamesFor(cat) {
+    var out = listFor(cat).slice(), seen = {}; out.forEach(function (n) { seen[n] = 1; });
+    historyNames(cat).forEach(function (n) { if (!seen[n]) { seen[n] = 1; out.push(n); } });
+    return out;
+  }
+  function facetOf(cat, n, key) {
+    if (cat === 'palce') { var f = (C.palceFacets || {})[n]; return f && f[key]; }
+    if (cat === 'silka') return (C.silkaGroups || {})[n] || 'Inne';
+    return null;
+  }
+  function facetDefs(cat) {
+    return cat === 'palce'
+      ? [['cwiczenie', 'Ćwiczenie'], ['liczba', 'Liczba palców'], ['chwyt', 'Chwyt'], ['krawadka', 'Krawądka']]
+      : [['grupa', 'Rodzaj']];
+  }
+  // Kaskadowo: opcje w wierszu liczą się z ćwiczeń pasujących do POZOSTAŁYCH już wybranych filtrów
+  // (nie do siebie samego), więc np. po wybraniu "Max Hangs" w Krawądce widać tylko krawędzie, które on ma.
   function exGroups(b) {
-    var names = listFor(b.cat);
-    if (b.cat === 'palce') {
-      var F = C.palceFacets || {};
-      return [
-        { key: 'cwiczenie', label: 'Ćwiczenie' },
-        { key: 'liczba', label: 'Liczba palców' },
-        { key: 'chwyt', label: 'Chwyt' },
-        { key: 'krawadka', label: 'Krawądka' }
-      ].map(function (r) {
-        var seen = {}, opts = [];
-        names.forEach(function (n) { var f = F[n], v = f && f[r.key]; if (v && !seen[v]) { seen[v] = 1; opts.push(v); } });
-        return { key: r.key, label: r.label, options: opts };
-      }).filter(function (r) { return r.options.length > 1; });
-    }
-    var G = C.silkaGroups || {}, seen = {}, opts = [];
-    names.forEach(function (n) { var v = G[n] || 'Inne'; if (!seen[v]) { seen[v] = 1; opts.push(v); } });
-    return opts.length > 1 ? [{ key: 'grupa', label: 'Rodzaj', options: opts }] : [];
+    var names = allNamesFor(b.cat);
+    return facetDefs(b.cat).map(function (d) {
+      var key = d[0], label = d[1];
+      var otherKeys = Object.keys(exFilters).filter(function (k) { return k !== key; });
+      var cand = names.filter(function (n) { return otherKeys.every(function (k) { return facetOf(b.cat, n, k) === exFilters[k]; }); });
+      var seen = {}, opts = [];
+      cand.forEach(function (n) { var v = facetOf(b.cat, n, key); if (v && !seen[v]) { seen[v] = 1; opts.push(v); } });
+      return { key: key, label: label, options: opts };
+    }).filter(function (r) { return r.options.length > 1 || (r.options.length === 1 && exFilters[r.key] != null); });
   }
   function exMatches(b, n, q) {
     if (q && n.toLowerCase().indexOf(q) === -1) return false;
-    var keys = Object.keys(exFilters); if (!keys.length) return true;
-    if (b.cat === 'palce') {
-      var f = (C.palceFacets || {})[n];
-      return keys.every(function (k) { return f && f[k] === exFilters[k]; });
-    }
-    var grupa = (C.silkaGroups || {})[n] || 'Inne';
-    return keys.every(function (k) { return grupa === exFilters[k]; });
+    return Object.keys(exFilters).every(function (k) { return facetOf(b.cat, n, k) === exFilters[k]; });
   }
   function renderExFilters(b) {
     var rows = exGroups(b);
@@ -402,7 +411,7 @@
   }
   function renderExList(b) {
     var q = $('#exq').value.trim().toLowerCase();
-    var names = listFor(b.cat).filter(function (n) { return exMatches(b, n, q); });
+    var names = allNamesFor(b.cat).filter(function (n) { return exMatches(b, n, q); });
     var h = names.map(function (n) { return '<button type="button" data-name="' + esc(n) + '">' + esc(n) + '</button>'; }).join('');
     if (!names.length) h += '<p class="exempty">Nic nie pasuje — spróbuj mniej filtrów.</p>';
     h += '<button type="button" data-new="1">+ Nowe ćwiczenie…</button>';

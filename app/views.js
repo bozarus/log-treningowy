@@ -35,18 +35,58 @@
   }
   var exAllCache = null, exAllKey = '';
   function exBaseMap() {
-    // Wszystkie ćwiczenia z całej historii (nazwa, ręce) - lista nazw się nie zmienia przy zmianie zakresu dat.
+    // Wszystkie ćwiczenia z całej historii (nazwa, ręce, kategoria) - lista nazw się nie zmienia przy zmianie zakresu dat.
     var all = LT.trainings(), key = all.length + '|' + (all.length ? all[all.length - 1].d : '');
     if (exAllCache && key === exAllKey) return exAllCache;
     var m = {};
     all.forEach(function (t) {
       t.b.forEach(function (b) {
         if (!b.n) return;
-        var base = baseOf(b.n), e = m[base] || (m[base] = { name: base, sides: {} });
-        e.sides[sideOf(b.n)] = 1;
+        var base = baseOf(b.n), e = m[base] || (m[base] = { name: base, sides: {}, cat: b.c });
+        e.sides[sideOf(b.n)] = 1; if (b.c) e.cat = b.c;
       });
     });
     exAllCache = m; exAllKey = key; return exAllCache;
+  }
+  function exCat(base) { var e = exBaseMap()[base]; return e ? e.cat : null; }
+
+  /* ---------- ćwiczenia: filtry-fasety (Ćwiczenie/Liczba palców/Chwyt/Krawądka dla Palce, Pull/Push/Inne dla Siłki) ---------- */
+  function facetOf(cat, n, key) {
+    if (cat === 'palce') { var f = (window.LT_CONFIG.palceFacets || {})[n]; return f && f[key]; }
+    if (cat === 'silka') return (window.LT_CONFIG.silkaGroups || {})[n] || 'Inne';
+    return null;
+  }
+  function facetDefsFor(cat) {
+    return cat === 'palce' ? [['cwiczenie', 'Ćwiczenie'], ['liczba', 'Liczba palców'], ['chwyt', 'Chwyt'], ['krawadka', 'Krawądka']]
+      : cat === 'silka' ? [['grupa', 'Rodzaj']] : [];
+  }
+  // Kaskadowo: opcje w wierszu liczą się z ćwiczeń pasujących do POZOSTAŁYCH już wybranych filtrów.
+  function facetRows(cat, names, filters) {
+    return facetDefsFor(cat).map(function (d) {
+      var key = d[0], label = d[1];
+      var otherKeys = Object.keys(filters).filter(function (k) { return k !== key; });
+      var cand = names.filter(function (n) { return otherKeys.every(function (k) { return facetOf(cat, n, k) === filters[k]; }); });
+      var seen = {}, opts = [];
+      cand.forEach(function (n) { var v = facetOf(cat, n, key); if (v && !seen[v]) { seen[v] = 1; opts.push(v); } });
+      return { key: key, label: label, options: opts };
+    }).filter(function (r) { return r.options.length > 1 || (r.options.length === 1 && filters[r.key] != null); });
+  }
+  function facetMatchAll(cat, n, filters) {
+    return Object.keys(filters).every(function (k) { return facetOf(cat, n, k) === filters[k]; });
+  }
+  function facetChipsHTML(cat, names, filters, actAttr) {
+    var rows = facetRows(cat, names, filters);
+    return rows.map(function (r) {
+      return '<div class="exfrow"><span class="lbl">' + esc(r.label) + '</span><div class="chips">' +
+        r.options.map(function (o) { return '<button type="button" ' + actAttr + ' data-k="' + esc(r.key) + '" data-v="' + esc(o) + '" aria-pressed="' + (filters[r.key] === o) + '">' + esc(o) + '</button>'; }).join('') +
+        '</div></div>';
+    }).join('');
+  }
+  function catChipsHTML(cur, actAttr) {
+    return '<div class="seg" role="group" aria-label="Kategoria ćwiczenia" style="grid-template-columns:repeat(3,1fr)">' +
+      [['', 'Wszystkie'], ['palce', 'Palce'], ['silka', 'Siłka']].map(function (c) {
+        return '<button type="button" ' + actAttr + ' data-v="' + c[0] + '" aria-pressed="' + (cur === c[0]) + '">' + c[1] + '</button>';
+      }).join('') + '</div>';
   }
   // from/to (opcjonalne, YYYY-MM-DD): liczba (n) to treningi z danym ćwiczeniem W TYM przedziale.
   // Bez from/to: liczba ze wszystkich treningów. Lista nazw zawsze z całej historii (żeby wybór nie znikał przy zawężaniu dat).
@@ -258,7 +298,7 @@
     var a = b.dataset.act;
     if (a === 'prev' || a === 'next') { cal.m += a === 'next' ? 1 : -1; if (cal.m < 0) { cal.m = 11; cal.y--; } if (cal.m > 11) { cal.m = 0; cal.y++; } renderCal(); }
     else if (a === 'today') { cal.y = null; renderCal(); }
-    else if (a === 'open-hist') { H.tab = 'list'; H.from = H.to = b.dataset.d; H.preset = ''; H.ex = ''; H.openDate = b.dataset.d; LT.go('hist'); }
+    else if (a === 'open-hist') { H.tab = 'list'; H.from = H.to = b.dataset.d; H.preset = ''; H.cat = ''; H.filters = {}; H.openDate = b.dataset.d; LT.go('hist'); }
     else if (a === 'ptype') { var t = b.dataset.t, i = cal.pt.indexOf(t); if (i > -1) cal.pt.splice(i, 1); else cal.pt.push(t); renderDay(); }
     else if (a === 'add-plan') {
       var pl = LT.planned().slice(); pl.push({ id: Date.now(), date: cal.sel, types: cal.pt.slice(), note: cal.pn.trim() }); LT.setPlanned(pl);
@@ -271,7 +311,7 @@
   $('#view-cal').addEventListener('input', function (e) { if (e.target.id === 'plan-note') cal.pn = e.target.value; });
 
   /* ---------- HISTORIA ---------- */
-  var H = { smooth: 0, tab: 'list', from: null, to: null, preset: '90', ex: '', shown: 30, openDate: null, A: null, B: null, sel: null };
+  var H = { smooth: 0, tab: 'list', from: null, to: null, preset: '90', cat: '', filters: {}, shown: 30, openDate: null, A: null, B: null, sel: null };
   var PRESETS = [['30', '30 dni'], ['90', '3 mies.'], ['180', '6 mies.'], ['365', 'Rok'], ['all', 'Wszystko']];
   function setPreset(k) {
     var to = LT.today(); H.to = to; H.preset = k;
@@ -290,7 +330,7 @@
     var exs = exerciseList(), ex = null;
     for (var i = 0; i < exs.length && !ex; i++) if (hasWeight(exs[i].name)) ex = exs[i];
     ex = ex || exs[0];
-    return { kind: 'ex', ex: ex ? ex.name : '', side: 'all', m: ex ? smartMetric(ex.name) : 'maxKg' };
+    return { kind: 'ex', ex: ex ? ex.name : '', cat: '', filters: {}, side: 'all', m: ex ? smartMetric(ex.name) : 'maxKg' };
   }
   function renderHist() {
     if (!H.to) setPreset('90');
@@ -320,8 +360,9 @@
     if (extra.length) h += '<p class="note">' + esc(extra.join(' · ')) + '</p>';
     return h + '</div>';
   }
-  function trainingCard(t, exFilter, open) {
-    var blocks = t.b.filter(function (b) { return !exFilter || (b.n && baseOf(b.n) === exFilter); });
+  function trainingCard(t, matchFn, open) {
+    var blocks = t.b.filter(function (b) { return !matchFn || (b.n && matchFn(baseOf(b.n))); });
+    var exFilter = !!matchFn;
     var meta = [];
     if (t.sen != null) meta.push('sen ' + t.sen); if (t.wyr != null) meta.push('wyr. ' + t.wyr);
     var nEx = t.b.filter(function (b) { return b.n; }).length; if (nEx) meta.push(nEx + ' ćw.');
@@ -344,14 +385,17 @@
     return h + '</div></details>';
   }
   function renderList() {
-    var body = $('#hist-body'), ex = H.ex;
-    var all = LT.trainings().filter(function (t) { return t.d >= H.from && t.d <= H.to && (!ex || t.b.some(function (b) { return b.n && baseOf(b.n) === ex; })); });
+    var body = $('#hist-body'), cat = H.cat, filters = H.filters;
+    var active = !!cat || Object.keys(filters).length > 0;
+    function matchFn(base) { return (!cat || exCat(base) === cat) && facetMatchAll(cat, base, filters); }
+    var all = LT.trainings().filter(function (t) { return t.d >= H.from && t.d <= H.to && (!active || t.b.some(function (b) { return b.n && matchFn(baseOf(b.n)); })); });
     all.sort(function (a, b) { return a.d < b.d ? 1 : a.d > b.d ? -1 : ((b.ts || '') < (a.ts || '') ? -1 : 1); });
-    var opts = '<option value="">Wszystkie ćwiczenia</option>' + exerciseList(H.from, H.to).map(function (e) { return '<option value="' + esc(e.name) + '"' + (e.name === ex ? ' selected' : '') + '>' + esc(e.name) + (e.n ? ' (' + e.n + '×)' : '') + '</option>'; }).join('');
-    var h = '<div class="field"><label for="h-ex">Filtr: ćwiczenie</label><select id="h-ex">' + opts + '</select></div>' +
-      '<p class="sub-title" aria-live="polite">' + all.length + ' ' + LT.plural(all.length, 'trening', 'treningi', 'treningów') + ' w wybranym okresie' + (ex ? ' z ćwiczeniem „' + esc(ex) + '”' : '') + '</p>';
-    if (!all.length) h += '<div class="card"><p class="empty-msg">Brak treningów w tym przedziale. Zmień daty albo wybierz „Wszystko”.</p></div>';
-    all.slice(0, H.shown).forEach(function (t) { h += trainingCard(t, ex, !!ex || t.d === H.openDate); });
+    var namesInCat = cat ? exerciseList(H.from, H.to).map(function (e) { return e.name; }).filter(function (n) { return exCat(n) === cat; }) : [];
+    var h = '<div class="card"><span class="lab">Filtr: ćwiczenie</span>' + catChipsHTML(cat, 'data-act="hcat"') +
+      facetChipsHTML(cat, namesInCat, filters, 'data-act="hfk"') + '</div>' +
+      '<p class="sub-title" aria-live="polite">' + all.length + ' ' + LT.plural(all.length, 'trening', 'treningi', 'treningów') + ' w wybranym okresie' + (active ? ' pasujących do filtra' : '') + '</p>';
+    if (!all.length) h += '<div class="card"><p class="empty-msg">Brak treningów w tym przedziale. Zmień daty, wybierz „Wszystko” albo mniej filtrów.</p></div>';
+    all.slice(0, H.shown).forEach(function (t) { h += trainingCard(t, active ? matchFn : null, active || t.d === H.openDate); });
     if (all.length > H.shown) h += '<button type="button" class="btn" data-act="more">Pokaż więcej (' + (all.length - H.shown) + ')</button>';
     body.innerHTML = h; H.openDate = null;
   }
@@ -365,7 +409,12 @@
     if (s.kind === 'var') {
       h += '<div class="field"><label for="' + key + '-v">Zmienna</label><select id="' + key + '-v" data-k="v">' + VARS.map(function (v) { return '<option value="' + v.id + '"' + (v.id === s.v ? ' selected' : '') + '>' + esc(v.label) + '</option>'; }).join('') + '</select></div>';
     } else {
-      h += '<div class="field"><label for="' + key + '-ex">Ćwiczenie</label><select id="' + key + '-ex" data-k="ex">' + exs.map(function (e) { return '<option value="' + esc(e.name) + '"' + (e.name === s.ex ? ' selected' : '') + '>' + esc(e.name) + (e.n ? ' (' + e.n + '×)' : '') + '</option>'; }).join('') + '</select></div>';
+      s.cat = s.cat || ''; s.filters = s.filters || {};
+      var namesInCat = s.cat ? exs.map(function (e) { return e.name; }).filter(function (n) { return exCat(n) === s.cat; }) : [];
+      var filtered = exs.filter(function (e) { return (!s.cat || exCat(e.name) === s.cat) && facetMatchAll(s.cat, e.name, s.filters); });
+      if (filtered.length && filtered.indexOf(cur) === -1) { s.ex = filtered[0].name; cur = filtered[0]; }
+      h += catChipsHTML(s.cat, 'data-act="scat"') + facetChipsHTML(s.cat, namesInCat, s.filters, 'data-act="sfk"');
+      h += '<div class="field"><label for="' + key + '-ex">Ćwiczenie</label><select id="' + key + '-ex" data-k="ex">' + filtered.map(function (e) { return '<option value="' + esc(e.name) + '"' + (e.name === s.ex ? ' selected' : '') + '>' + esc(e.name) + (e.n ? ' (' + e.n + '×)' : '') + '</option>'; }).join('') + '</select></div>';
       var sides = cur ? Object.keys(cur.sides) : [];
       if (sides.length > 1) {
         var so = [['all', 'Wszystkie zapisy']]; ['prawa', 'lewa', 'obie'].forEach(function (x) { if (cur.sides[x]) so.push([x, x === 'obie' ? 'Obie ręce (bez podziału)' : x === 'prawa' ? 'Tylko prawa ręka' : 'Tylko lewa ręka']); });
@@ -439,6 +488,21 @@
     else if (a === 'more') { H.shown += 30; renderList(); }
     else if (a === 'add-b') { H.B = defaultSpec('var'); H.sel = null; renderChartTab(); }
     else if (a === 'rm-b') { H.B = null; H.sel = null; renderChartTab(); }
+    else if (a === 'hcat') { H.cat = b.dataset.v; H.filters = {}; H.shown = 30; renderList(); }
+    else if (a === 'hfk') {
+      var k = b.dataset.k, v = b.dataset.v;
+      if (H.filters[k] === v) delete H.filters[k]; else H.filters[k] = v;
+      H.shown = 30; renderList();
+    }
+    else if (a === 'scat') {
+      var scard = b.closest('.ser'), skey = scard.dataset.s, ss = H[skey];
+      ss.cat = b.dataset.v; ss.filters = {}; ss.ex = ''; H.sel = null; rerenderSer(skey); drawAll();
+    }
+    else if (a === 'sfk') {
+      var scard2 = b.closest('.ser'), skey2 = scard2.dataset.s, ss2 = H[skey2], k2 = b.dataset.k, v2 = b.dataset.v;
+      if (ss2.filters[k2] === v2) delete ss2.filters[k2]; else ss2.filters[k2] = v2;
+      H.sel = null; rerenderSer(skey2); drawAll();
+    }
   });
   hv.addEventListener('change', function (e) {
     var t = e.target;
@@ -447,7 +511,6 @@
       if (H.from > H.to) { var x = H.from; H.from = H.to; H.to = x; }
       H.preset = ''; H.shown = 30; H.sel = null; renderHist(); return;
     }
-    if (t.id === 'h-ex') { H.ex = t.value; H.shown = 30; renderList(); return; }
     if (t.id === 'h-smooth') { H.smooth = +t.value; H.sel = null; drawAll(); return; }
     var card = t.closest('.ser'); if (!card || !t.dataset.k) return;
     var key = card.dataset.s, s = H[key], k = t.dataset.k;
