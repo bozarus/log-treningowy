@@ -791,5 +791,17 @@
     $('#home-update').addEventListener('click', function () {
       if (swReg && swReg.waiting) { wantReload = true; swReg.waiting.postMessage('skip'); } else location.reload();
     });
+    // Ręczne sprawdzenie w Ustawieniach: automatyczne wykrywanie czasem się spóźnia
+    // (przeglądarka sama decyduje, kiedy sprawdzić plik sw.js), więc to daje pewność od razu.
+    $('#cfg-update').addEventListener('click', function () {
+      if (!swReg) { msg('Aktualizacje nie działają w tym trybie (podgląd albo stare połączenie ze service workerem).', true); return; }
+      msg('Sprawdzam…');
+      swReg.update().then(function () {
+        setTimeout(function () {
+          if (swReg.waiting) { showUpdate(); msg('Jest nowa wersja — dotknij „Zaktualizuj” na ekranie startowym (po zamknięciu Ustawień).'); }
+          else msg('Masz już najnowszą wersję (' + (C.version || '?') + ').');
+        }, 1200);
+      }).catch(function () { msg('Nie udało się sprawdzić — brak internetu?', true); });
+    });
   }
 })();
