@@ -11,13 +11,16 @@ const PLAN_SHEET = 'Plan Makro';              // zakładka z planem makro (tylko
 const STATE_SHEET = 'Aplikacja (nie ruszać)'; // zakładka, w której aplikacja trzyma plany i własne ćwiczenia
 
 // ====== UKŁAD ARKUSZA (nie zmieniaj, chyba że zmieniasz arkusz) ======
-const N_BLOCKS = 12;          // 4 bloki Palce + 8 bloków Siłka
+const N_BLOCKS = 16;          // 8 bloków Palce + 8 bloków Siłka (od rozszerzenia Palce 4->8, 2026-09)
+const N_PALCE = 8;            // ile pierwszych bloków to "Palce" (reszta to "Siłka")
+const N_BLOCKS_PRE_PALCE8 = 12;   // ile bloków miał arkusz PRZED rozszerzeniem Palce 4->8 (do migracji)
+const N_PALCE_PRE_PALCE8 = 4;     // ile z nich to były bloki Palce PRZED rozszerzeniem (do migracji)
 const OLD_BLOCK_W = 13;       // dawny blok: Przejdź, Ćwiczenie, Komentarz, Kg, Rest, 8x Powt.
 const BLOCK_W = 21;           // nowy blok: + 8 kolumn "Kg s1..s8" zaraz za Kg
 const BLOCK_START = 13;       // kolumna M: początek pierwszego bloku
 const OLD_TOTAL_COLS = 189;   // dawny arkusz miał kolumny A:GG
 const SUMMARY_START = BLOCK_START + N_BLOCKS * BLOCK_W;   // "Przejdź do sekcji 14"
-const TOTAL_COLS = SUMMARY_START + 20;                    // 285 kolumn po dodaniu Kg s1..s8
+const TOTAL_COLS = SUMMARY_START + 20;                    // kolumn łącznie (285 + 84 po rozszerzeniu Palce)
 
 // ====== WEJŚCIA Z APLIKACJI ======
 // Nowsze wersje aplikacji wysyłają wszystko przez POST, więc hasło nie trafia do adresu URL.
@@ -261,7 +264,7 @@ function buildTrainings_(values, ncols, fmt) {
       const p = [], idx = [];
       for (let i = 0; i < 8; i++) { const v = numIn_(r[s + (hasKgs ? 13 : 5) + i], 5000); if (v !== null) { p.push(v); idx.push(i); } }
       if (!name && !p.length) continue;
-      const blk = { c: b < 4 ? 'palce' : 'silka', n: name, p: p };
+      const blk = { c: b < N_PALCE ? 'palce' : 'silka', n: name, p: p };
       if (r[s + 2] !== '') blk.k = String(r[s + 2]);
       const kgMain = numIn_(r[s + 3], 1000); if (kgMain !== null) blk.kg = kgMain;
       let kgs = null;
@@ -388,6 +391,49 @@ function dodajKolumnyKg() {
   Logger.log('Gotowe: dodano ' + (N_BLOCKS * 8) + ' kolumn. Arkusz ma teraz ' + sh.getLastColumn() + ' kolumn.');
 }
 
+/**
+ * Rozszerza limit ćwiczeń "Palce" z 4 do 8: wstawia 4 nowe bloki (84 kolumny) zaraz po
+ * dotychczasowym 4. bloku Palce. Dawne bloki Siłka (5-12) przesuwają się na pozycje 9-16 —
+ * ich dane NIE są ruszane, tylko przesuwają się razem z kolumnami. Uruchom RAZ, najlepiej
+ * najpierw na KOPII arkusza. Wymaga, żeby wcześniej była już uruchomiona dodajKolumnyKg().
+ */
+function rozszerzBlokiPalce() {
+  const sh = sheet_();
+  const n = sh.getLastColumn();
+  const NEW_BLOCKS = N_BLOCKS - N_BLOCKS_PRE_PALCE8;                 // 4 nowe bloki
+  const OLD_TOTAL = SUMMARY_START - NEW_BLOCKS * BLOCK_W + 20;       // 285: suma sprzed rozszerzenia
+  if (n >= TOTAL_COLS) { Logger.log('Bloki Palce już rozszerzone (8). Nic nie zmieniam.'); return; }
+  if (n !== OLD_TOTAL) throw new Error('Arkusz ma ' + n + ' kolumn, a spodziewałem się ' + OLD_TOTAL + ' (12 bloków z Kg s1–s8, przed rozszerzeniem Palce). Uruchom najpierw dodajKolumnyKg(), jeśli jeszcze nie była uruchomiona.');
+  const hdr = sh.getRange(1, 1, 1, n).getValues()[0];
+  const insertAfterCol = BLOCK_START + N_PALCE_PRE_PALCE8 * BLOCK_W - 1;   // koniec 4. bloku (dawne Palce), 1-indeksowana kolumna
+  if (String(hdr[insertAfterCol - BLOCK_W]).indexOf('Przejdź') !== 0) throw new Error('Nie znajduję początku 4. bloku tam, gdzie się spodziewałem. Nic nie zmieniam.');
+  if (String(hdr[insertAfterCol]).indexOf('Przejdź') !== 0) throw new Error('Nie znajduję początku 5. bloku (dawna Siłka) tam, gdzie się spodziewałem. Nic nie zmieniam.');
+
+  sh.insertColumnsAfter(insertAfterCol, NEW_BLOCKS * BLOCK_W);
+
+  // Nagłówki nowych bloków (będą to bloki 5-8, kontynuacja Palce).
+  for (let k = 0; k < NEW_BLOCKS; k++) {
+    const blockNum = N_PALCE_PRE_PALCE8 + 1 + k;   // 5, 6, 7, 8
+    const base = insertAfterCol + k * BLOCK_W;          // 0-indeksowana kolumna "Przejdź do sekcji" tego bloku
+    const names = ['Przejdź do sekcji', 'Ćwiczenie', 'Komentarz', 'Kg'];
+    for (let i = 1; i <= 8; i++) names.push('Kg s' + i + ' (' + blockNum + ')');
+    names.push('Rest');
+    for (let i = 0; i < 8; i++) names.push('Powt./sek.');
+    sh.getRange(1, base + 1, 1, BLOCK_W).setValues([names]);
+  }
+
+  // Odśwież numerki "(N)" w nagłówkach "Kg sX" dawnych bloków Siłka, które właśnie się przesunęły (dawne 5-12 -> teraz 9-16).
+  const n2 = sh.getLastColumn();
+  const hdr2 = sh.getRange(1, 1, 1, n2).getValues()[0];
+  for (let b = N_PALCE; b < N_BLOCKS; b++) {
+    const base = BLOCK_START + b * BLOCK_W - 1;
+    for (let i = 1; i <= 8; i++) hdr2[base + 3 + i] = 'Kg s' + i + ' (' + (b + 1) + ')';
+  }
+  sh.getRange(1, 1, 1, n2).setValues([hdr2]);
+
+  Logger.log('Gotowe: dodano ' + (NEW_BLOCKS * BLOCK_W) + ' kolumn (nowe bloki Palce 5-8). Arkusz ma teraz ' + sh.getLastColumn() + ' kolumn (Palce: 8, Siłka: 8). Stare bloki Siłka są teraz blokami 9-16 — dane bez zmian, tylko przesunięte.');
+}
+
 /** Opcjonalnie: pokazuje, ile starych wpisów da się uzupełnić (nic nie zapisuje). */
 function uzupelnijStareKgPodglad() { uzupelnijStareKg_(true); }
 /** Opcjonalnie: uzupełnia "Kg s1..s8" w starych wierszach na podstawie kolumny Kg. Wypełnia tylko puste komórki. */
@@ -420,4 +466,386 @@ function uzupelnijStareKg_(dry) {
     if (!dry) sh.getRange(2, s + 5, nRows, 8).setValues(out);
   }
   Logger.log((dry ? 'PODGLĄD: ' : 'ZAPISANO: ') + 'uzupełnionych bloków: ' + filled + ', pominiętych (niejasny zapis w Kg): ' + skipped + '.');
+}
+
+
+// ====== JEDNORAZOWA MIGRACJA: nowe nazwy ćwiczeń „Palce” (2026-09) ======
+// Historyczne nazwy w blokach Palce (1-4) zamieniamy na nowe, ustalone nazwy.
+// Bloki Siłka (5-12) NIE są ruszane. Stare nazwy trafiają do osobnej zakładki
+// "Backup nazw (palce)" (wiersz w "Dane", numer bloku, stara nazwa, nowa nazwa) — nic
+// nie kasujemy, a "Dane" nie zmienia układu kolumn.
+
+const RENAME_MAP_PALCE = {
+  "10mm": "Max Hangs 4p open 10mm",
+  "8mm": "Max Hangs 4p open 8mm",
+  "3p open lewa": "Pulls 3p open",
+  "3p open prawa": "Pulls 3p open",
+  "4p asym L": "Pulls 4p open asym",
+  "4p asym lewa": "Pulls 4p open asym",
+  "4p asym P": "Pulls 4p open asym",
+  "4p asym prawa": "Pulls 4p open asym",
+  "4p half asym lewa 5:10": "Repeaters 5:10 4p half crimp asym",
+  "4p half asym prawa 5:10": "Repeaters 5:10 4p half crimp asym",
+  "4p open asym lewa 5:10": "Repeaters 5:10 4p open asym",
+  "4p open asym prawa 5:10": "Repeaters 5:10 4p open asym",
+  "6:10  repeaters 17mm L": "Repeaters 6:10 4p open 17mm",
+  "6:10  repeaters 17mm P": "Repeaters 6:10 4p open 17mm",
+  "6:10 repeaters 17mm L": "Repeaters 6:10 4p open 17mm",
+  "6:10 repeaters 17mm P": "Repeaters 6:10 4p open 17mm",
+  "6:10  repeaters asym P": "Repeaters 6:10 4p open 17mm",
+  "6:10 repeaters asym L": "Repeaters 6:10 4p open 17mm",
+  "6:10 repeaters asym P": "Repeaters 6:10 4p open 17mm",
+  "6:10 repeaters 4p": "Repeaters 6:10 4p open 20mm",
+  "6:10 repeaters asym  3p L": "Repeaters 6:10 3p open asym",
+  "6:10 repeaters asym  3p P": "Repeaters 6:10 3p open asym",
+  "6:10 repeaters asym half  b3 P": "Repeaters 6:10 b3 half crimp asym",
+  "6:10 repeaters asym half 3p no fuck L": "Repeaters 6:10 3p (bez środkowego) half crimp asym",
+  "6:10 repeaters half 17mm  P": "Repeaters 6:10 4p half crimp 17mm",
+  "6:10 repeaters half 17mm L": "Repeaters 6:10 4p half crimp 17mm",
+  "6:10 repeaters half asym L": "Repeaters 6:10 4p half crimp 17mm",
+  "6:10 repeaters half asym P": "Repeaters 6:10 4p half crimp 17mm",
+  "7:3 repeaters 4p": "Repeaters 7:3 4p open Campus XL",
+  "7:3 repeaters asym  3p L": "Repeaters 7:3 3p open asym",
+  "7:3 repeaters asym  3p P": "Repeaters 7:3 3p open asym",
+  "7:3 repeaters asym  4p P": "Repeaters 7:3 4p open asym",
+  "7:3 repeaters asym 4p L": "Repeaters 7:3 4p open asym",
+  "7:3 repeaters asym half  3p no fuck P": "Repeaters 7:3 3p (bez środkowego) half crimp asym",
+  "7:3 repeaters asym half 3p no fuck L": "Repeaters 7:3 3p (bez środkowego) half crimp asym",
+  "BM2K 20mm": "Max Hangs 4p open 20mm",
+  "Campus po drewnie": "Campus po drewnie",
+  "Campus z ziemi": "Campus z ziemi",
+  "Density 4p 15mm dom": "Density 4p 15mm",
+  "Density 4p 20mm dom": "Density 4p 20mm",
+  "Density half 17mm lewa": "Density 4p half crimp 17mm",
+  "Density half 17mm prawa": "Density 4p half crimp 17mm",
+  "Density half asym lewa": "Density 4p half crimp asym",
+  "Density half asym prawa": "Density 4p half crimp asym",
+  "Dom 10mm": "Max Hangs 4p open 10mm",
+  "Dom 15mm": "Max Hangs 4p open 15mm",
+  "MH 17mm L": "Max Hangs 4p open 17mm",
+  "MH 17mm P": "Max Hangs 4p open 17mm",
+  "MH half 17mm lewa": "Max Hangs 4p half crimp 17mm",
+  "MH half 17mm prawa": "Max Hangs 4p half crimp 17mm",
+  "Pulls 17mm L": "Pulls 4p open 17mm",
+  "Pulls 17mm P": "Pulls 4p open 17mm",
+  "Pulls half 17mm lewa": "Pulls 4p half crimp 17mm",
+  "Pulls half 17mm prawa": "Pulls 4p half crimp 17mm",
+  "Wrist wrench P i L": "Wrist wrench",
+};
+
+// "4p half asym lewa/prawa" (bez 5:10) to w rzeczywistości dwa różne ćwiczenia z jednego
+// okresu na drugi (patrz Kg): do ~34 kg = half crimp, od 42 kg = open. Próg 38 kg leży
+// dokładnie w przerwie między nimi (nie ma wpisów z Kg 34-42), więc jest bezpieczny.
+function nowaNazwaPalce_(stara, kg) {
+  const s = String(stara || '').trim();
+  if (s === '4p half asym lewa' || s === '4p half asym prawa') {
+    return (typeof kg === 'number' && kg >= 38) ? 'Max Hangs 4p open asym' : 'Max Hangs 4p half crimp asym';
+  }
+  return Object.prototype.hasOwnProperty.call(RENAME_MAP_PALCE, s) ? RENAME_MAP_PALCE[s] : null;
+}
+
+/** Podgląd: nic nie zapisuje, tylko liczy i pokazuje w Logger.log, co by się zmieniło. Uruchom NAJPIERW to. */
+function zmienNazwyPalcePodglad() { zmienNazwyPalce_(true); }
+/** Zapis: zmienia nazwy w "Dane" i tworzy zakładkę "Backup nazw (palce)". Uruchom PO podglądzie. */
+function zmienNazwyPalce() { zmienNazwyPalce_(false); }
+
+function zmienNazwyPalce_(dry) {
+  const sh = sheet_();
+  const lay = layoutStatus_(sh);
+  if (lay !== 'ok') throw new Error(lay);
+  const last = lastRow_(sh);
+  if (last < 2) { Logger.log('Brak wierszy w "Dane".'); return; }
+  const nRows = last - 1;
+  const data = sh.getRange(2, 1, nRows, TOTAL_COLS).getValues();
+  const log = [];          // [wiersz w Dane, blok 1-4, stara nazwa, nowa nazwa]
+  const nieznane = {};     // nazwy, których nie ma w mapie — nic z nimi nie robimy
+  let zmienione = 0;
+
+  for (let b = 0; b < 4; b++) {              // tylko bloki Palce (0-3); Siłka (4-11) pomijamy
+    const s = BLOCK_START + b * BLOCK_W;     // 0-indeksowana pozycja "Ćwiczenie" w tym bloku
+    for (let r = 0; r < nRows; r++) {
+      const row = data[r];
+      const stara = String(row[s] || '').trim();
+      if (!stara) continue;
+      const kg = row[s + 2];
+      const nowa = nowaNazwaPalce_(stara, typeof kg === 'number' ? kg : null);
+      if (nowa === null) { nieznane[stara] = (nieznane[stara] || 0) + 1; continue; }
+      if (nowa === stara) continue;          // np. "Campus z ziemi" — nazwa się nie zmienia
+      log.push([r + 2, b + 1, stara, nowa]);
+      if (!dry) row[s] = nowa;
+      zmienione++;
+    }
+  }
+
+  if (!dry && log.length) {
+    for (let b = 0; b < 4; b++) {
+      const s = BLOCK_START + b * BLOCK_W;
+      const col = [];
+      for (let r = 0; r < nRows; r++) col.push([data[r][s]]);
+      sh.getRange(2, s + 1, nRows, 1).setValues(col);
+    }
+    zapiszBackupNazwPalce_(log);
+  }
+
+  const nieznaneTxt = Object.keys(nieznane).map(function (k) { return '„' + k + '” (' + nieznane[k] + '×)'; }).join(', ');
+  Logger.log(
+    (dry ? 'PODGLĄD (nic nie zapisano): ' : 'ZAPISANO: ') +
+    'komórek do zmiany: ' + zmienione + '.' +
+    (nieznaneTxt ? ' Nierozpoznane nazwy, których NIE ruszyłem: ' + nieznaneTxt : ' Wszystkie napotkane nazwy były rozpoznane.')
+  );
+}
+
+function zapiszBackupNazwPalce_(log) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const name = 'Backup nazw (palce)';
+  let sh = ss.getSheetByName(name);
+  if (sh) ss.deleteSheet(sh);
+  sh = ss.insertSheet(name);
+  sh.getRange(1, 1, 1, 4).setValues([['Wiersz w "Dane"', 'Blok (1-4)', 'Stara nazwa', 'Nowa nazwa']]);
+  sh.getRange('A1:D1').setFontWeight('bold');
+  if (log.length) sh.getRange(2, 1, log.length, 4).setValues(log);
+  sh.autoResizeColumns(1, 4);
+}
+
+
+// ====== ODŚWIEŻENIE LISTY ĆWICZEŃ W DASHBOARD (rozwijane menu B2:C2, "Ćwiczenie 1"/"Ćwiczenie 2") ======
+// Ustawia obie listy na faktyczne nazwy ćwiczeń, jakie są teraz w zakładce "Dane"
+// (Palce już po migracji na nowe nazwy, Siłka bez zmian). Można uruchamiać wielokrotnie,
+// np. po każdym dopisaniu nowego ćwiczenia — zawsze przelicza od nowa z całej zakładki "Dane".
+function odswiezDropdownDashboard() {
+  const sh = sheet_();
+  const last = lastRow_(sh);
+  const palceSet = {}, silkaSet = {};
+  if (last >= 2) {
+    const data = sh.getRange(2, 1, last - 1, TOTAL_COLS).getValues();
+    for (let b = 0; b < N_BLOCKS; b++) {
+      const s = BLOCK_START + b * BLOCK_W;      // 0-indeksowana pozycja "Ćwiczenie" w tym bloku
+      const bucket = b < N_PALCE ? palceSet : silkaSet;   // pierwsze N_PALCE bloków = Palce, reszta = Siłka
+      for (let r = 0; r < data.length; r++) {
+        const v = String(data[r][s] || '').trim();
+        if (v) bucket[v] = true;
+      }
+    }
+  }
+  function pl(a, b) { return a.localeCompare(b, 'pl'); }
+  const palce = Object.keys(palceSet).sort(pl);
+  const silka = Object.keys(silkaSet).sort(pl);
+  const list = palce.concat(silka);
+  if (!list.length) { Logger.log('Brak nazw ćwiczeń w "Dane" — nic nie zmieniam.'); return; }
+
+  const dash = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Dashboard');
+  if (!dash) { Logger.log('Nie ma zakładki "Dashboard".'); return; }
+  const rule = SpreadsheetApp.newDataValidation().requireValueInList(list, true).setAllowInvalid(false).build();
+  dash.getRange('B2:C2').setDataValidation(rule);
+  Logger.log('Gotowe: rozwijana lista w Dashboard (B2:C2) ma teraz ' + list.length + ' pozycji (' + palce.length + ' Palce, ' + silka.length + ' Siłka).');
+}
+
+
+// ====== DASHBOARD: przyciski "Generuj" / "Czyść" + auto-odświeżanie po zmianie B2/C2/D2 ======
+// Odtworzone z Twojego starego skryptu (backup), dopasowane do obecnego układu "Dane"
+// (bloki po 21 kolumn, z kolumnami "Kg s1..s8" — stary skrypt zakładał jeszcze 13-kolumnowe bloki).
+function generateTrainingDashboard() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const daneSheet = ss.getSheetByName(SHEET_NAME);
+  const dashSheet = ss.getSheetByName('Dashboard');
+  const dane = daneSheet.getDataRange().getValues();
+  const headers = dane[0];
+
+  const idxStartMain = headers.indexOf('Waga');
+  const idxEndMain = headers.indexOf('Koniec rozgrzewki');
+  const idxStartEnd = headers.indexOf('Focus na ścianie 1');
+  const idxEndEnd = headers.indexOf('Słabe strony');
+  if ([idxStartMain, idxEndMain, idxStartEnd, idxEndEnd].some(function (i) { return i < 0; })) {
+    throw new Error('Nie znalazłem jednej z kolumn ("Waga", "Koniec rozgrzewki", "Focus na ścianie 1", "Słabe strony") w nagłówkach "Dane". Sprawdź, czy nazwy nagłówków się nie zmieniły.');
+  }
+
+  const ex1 = dashSheet.getRange('B2').getValue();
+  const ex2 = dashSheet.getRange('C2').getValue();
+  const rodzajTreningu = dashSheet.getRange('D2').getValue();
+
+  const exW = BLOCK_W - 1;   // szerokość bloku ćwiczenia od kolumny "Ćwiczenie" (bez "Przejdź do sekcji")
+  const exerciseBlocks = [];
+  for (let b = 0; b < N_BLOCKS; b++) exerciseBlocks.push(BLOCK_START + b * BLOCK_W);   // 0-indeksowana kolumna "Ćwiczenie" w bloku b
+
+  const outputHeaders = ['Data']
+    .concat(headers.slice(idxStartMain, idxEndMain + 1))
+    .concat(headers.slice(exerciseBlocks[0], exerciseBlocks[0] + exW).map(function (h) { return 'Ex1: ' + h; }))
+    .concat(headers.slice(exerciseBlocks[0], exerciseBlocks[0] + exW).map(function (h) { return 'Ex2: ' + h; }))
+    .concat(headers.slice(idxStartEnd, idxEndEnd + 1));
+
+  const output = [outputHeaders];
+  const idxRodzaj = headers.indexOf('Rodzaj treningu');
+  const idxData = headers.indexOf('Data');
+
+  for (let r = 1; r < dane.length; r++) {
+    const row = dane[r];
+    if (rodzajTreningu && String(row[idxRodzaj] || '').toLowerCase() !== String(rodzajTreningu).toLowerCase()) continue;
+
+    const data = row[idxData] || '';
+    const mainSection = row.slice(idxStartMain, idxEndMain + 1);
+    const endSection = row.slice(idxStartEnd, idxEndEnd + 1);
+
+    let ex1Data = new Array(exW).fill('');
+    let ex2Data = new Array(exW).fill('');
+    exerciseBlocks.forEach(function (idx) {
+      const name = row[idx];
+      if (name === ex1) ex1Data = row.slice(idx, idx + exW);
+      if (name === ex2) ex2Data = row.slice(idx, idx + exW);
+    });
+
+    let addRow = false;
+    if (!ex1 && !ex2 && rodzajTreningu) addRow = true;
+    else if ((ex1Data[0] && ex1Data[0] !== '') || (ex2Data[0] && ex2Data[0] !== '')) addRow = true;
+
+    if (addRow) output.push([data].concat(mainSection, ex1Data, ex2Data, endSection));
+  }
+
+  dashSheet.getRange(4, 1, dashSheet.getMaxRows() - 3, outputHeaders.length).clearContent();
+  dashSheet.getRange(4, 1, output.length, outputHeaders.length).setValues(output);
+}
+
+function clearAllMenus() {
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Dashboard').getRange('B2:D2').clearContent();
+}
+
+// ====== PODSUMOWANIE OKRESU (zakładka "Podsumowanie", przycisk "Pokaż") ======
+function showPeriodSummary() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const daneSheet = ss.getSheetByName(SHEET_NAME);
+  const summarySheet = ss.getSheetByName('Podsumowanie');
+
+  const dataOd = summarySheet.getRange('C1').getValue();
+  const dataDo = summarySheet.getRange('E1').getValue();
+
+  if (!dataOd || !dataDo) {
+    SpreadsheetApp.getUi().alert('Wybierz zakres dat w C1 i E1!');
+    return;
+  }
+
+  const dane = daneSheet.getDataRange().getValues();
+  const headers = dane[0];
+
+  const filteredData = [headers];
+  for (let r = 1; r < dane.length; r++) {
+    const row = dane[r];
+    const dataTreningu = row[1];
+    if (dataTreningu instanceof Date && dataTreningu >= dataOd && dataTreningu <= dataDo) filteredData.push(row);
+  }
+
+  const nonEmptyCols = [];
+  for (let c = 0; c < headers.length; c++) {
+    const header = headers[c];
+    if (!header || String(header).trim() === '') continue;
+    let hasData = false;
+    for (let r = 1; r < filteredData.length; r++) {
+      const cellValue = filteredData[r][c];
+      if (cellValue && String(cellValue).trim() !== '') { hasData = true; break; }
+    }
+    if (hasData) nonEmptyCols.push(c);
+  }
+
+  const cleanHeaders = nonEmptyCols.map(function (col) { return headers[col]; });
+  const cleanData = [cleanHeaders];
+  for (let r = 1; r < filteredData.length; r++) {
+    cleanData.push(nonEmptyCols.map(function (col) { const v = filteredData[r][col]; return v || ''; }));
+  }
+
+  summarySheet.getRange('A4:ZZ1000').clearContent();
+
+  if (cleanData.length > 1) {
+    const numRows = cleanData.length, numCols = cleanData[0].length;
+    summarySheet.getRange(4, 1, numRows, numCols).setValues(cleanData);
+
+    const zakresInfo = 'Podsumowanie (' + (cleanData.length - 1) + ' treningów): ' +
+      Utilities.formatDate(dataOd, Session.getScriptTimeZone(), 'dd.MM.yyyy') + ' - ' +
+      Utilities.formatDate(dataDo, Session.getScriptTimeZone(), 'dd.MM.yyyy');
+
+    summarySheet.getRange('A2').clearContent();
+    summarySheet.getRange('A2').setValue(zakresInfo)
+      .setFontWeight('bold').setFontSize(14).setWrap(false)
+      .setHorizontalAlignment('left').setVerticalAlignment('middle');
+
+    summarySheet.setColumnWidth(1, 100);
+    summarySheet.setColumnWidth(3, 85);
+    summarySheet.setColumnWidth(5, 85);
+    for (let col = 2; col <= numCols; col++) {
+      if (col === 3 || col === 5) continue;
+      let maxWidth = 0;
+      for (let row = 0; row < cleanData.length; row++) {
+        maxWidth = Math.max(maxWidth, String(cleanData[row][col - 1] || '').length);
+      }
+      maxWidth = Math.max(maxWidth, String(cleanHeaders[col - 1] || '').length);
+      summarySheet.setColumnWidth(col, Math.max(maxWidth * 1.2, 50));
+    }
+  } else {
+    summarySheet.getRange('A4').setValue('Brak danych w wybranym okresie');
+  }
+}
+
+// Auto-odświeżanie: zmiana B2/C2/D2 w Dashboard -> generateTrainingDashboard; zmiana E1 w Podsumowanie -> showPeriodSummary.
+function onEdit(e) {
+  const range = e.range, sheet = range.getSheet(), cell = range.getA1Notation();
+  if (sheet.getName() === 'Dashboard' && (cell === 'B2' || cell === 'C2' || cell === 'D2')) generateTrainingDashboard();
+  if (sheet.getName() === 'Podsumowanie' && cell === 'E1') showPeriodSummary();
+}
+
+
+// ====== PORZĄDKI W "Testy": czyszczenie nazw + kolumna ze starą nazwą obok ======
+// Tylko kosmetyka (spacje, przecinki na końcu) — nazwy testów w tej zakładce to w większości
+// pojedyncze, niepowtarzalne wpisy, więc nie mapujemy ich na nową strukturę (jak w "Dane"),
+// tylko porządkujemy zapis. Stara (oryginalna) nazwa zostaje obok, w nowo wstawionej kolumnie B.
+function wyczyscNazwyTesty() {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Testy');
+  if (!sh) { Logger.log('Nie ma zakładki "Testy".'); return; }
+  const last = sh.getLastRow();
+  if (last < 2) { Logger.log('Brak nazw w kolumnie A.'); return; }
+
+  const namesRange = sh.getRange(2, 1, last - 1, 1);
+  const names = namesRange.getValues();
+
+  function clean(v) {
+    let s = String(v || '').trim().replace(/\s+/g, ' ');
+    s = s.replace(/[,;]+$/, '').trim();
+    return s;
+  }
+
+  const stare = [], nowe = [];
+  let zmienione = 0;
+  names.forEach(function (row) {
+    const orig = row[0];
+    const s = String(orig || '').trim();
+    if (!s) { stare.push(['']); nowe.push(['']); return; }
+    const nowa = clean(orig);
+    stare.push([s]);
+    nowe.push([nowa]);
+    if (nowa !== s) zmienione++;
+  });
+
+  // wstaw nową kolumnę B (dane od C w prawo przesuną się razem z datami w nagłówku — nic się nie rozjedzie)
+  sh.insertColumnBefore(2);
+  sh.getRange('B1').setValue('Stara nazwa').setFontWeight('bold');
+  sh.getRange(2, 2, stare.length, 1).setValues(stare);
+  sh.getRange(2, 1, nowe.length, 1).setValues(nowe);
+  sh.autoResizeColumn(1);
+  sh.autoResizeColumn(2);
+
+  Logger.log('Gotowe: wyczyszczono ' + zmienione + ' z ' + names.length + ' nazw. Stare nazwy są teraz w kolumnie B.');
+}
+
+
+// ====== PORZĄDKI: stare nazwy Palce na liście "własnych ćwiczeń" (zakładka "Aplikacja (nie ruszać)") ======
+// Ta lista rośnie przez "+ Nowe ćwiczenie" w apce i mogła nazbierać starych nazw Palce sprzed
+// reorganizacji. Czyści ją tym samym mapowaniem, którego użyliśmy do historii w "Dane".
+function wyczyscCustomPalce() {
+  const st = readState_();
+  const list = st.custom.palce || [];
+  const out = [];
+  let zmienione = 0;
+  list.forEach(function (n) {
+    const nowa = Object.prototype.hasOwnProperty.call(RENAME_MAP_PALCE, n) ? RENAME_MAP_PALCE[n] : n;
+    if (nowa !== n) zmienione++;
+    if (out.indexOf(nowa) === -1) out.push(nowa);
+  });
+  writeState_(st.planned, { palce: out, silka: st.custom.silka });
+  Logger.log('Gotowe: ' + zmienione + ' starych nazw zamienionych, lista ma teraz ' + out.length + ' pozycji (było ' + list.length + ').');
 }

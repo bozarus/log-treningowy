@@ -74,6 +74,19 @@
     return null;
   }
   function lastWaga() { var a = trainings(); for (var i = a.length - 1; i >= 0; i--) if (a[i].w != null) return a[i].w; return null; }
+  // Ćwiczenia danej kategorii, które pojawiły się co najmniej raz w ostatnich `months` miesiącach
+  // (domyślnie 6), od najnowszego użycia. Do szybkiego wyboru bez przeklikiwania się przez filtry.
+  function monthsAgoStr(n) { var d = new Date(); d.setMonth(d.getMonth() - n); return d.toISOString().slice(0, 10); }
+  function recentNames(cat, months) {
+    var cutoff = monthsAgoStr(months || 6);
+    var all = trainings().slice().sort(function (a, b) { return a.d < b.d ? 1 : a.d > b.d ? -1 : 0; });
+    var seen = {}, out = [];
+    all.forEach(function (t) {
+      if (t.d < cutoff) return;
+      t.b.forEach(function (bl) { if (bl.c === cat && bl.n && !seen[bl.n]) { seen[bl.n] = 1; out.push(bl.n); } });
+    });
+    return out;
+  }
   function localTs(iso) {
     var d = new Date(iso); function p(n) { return ('0' + n).slice(-2); }
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
@@ -85,7 +98,7 @@
     if (e.cele) t.cele = e.cele; if (Object.keys(wu).length) t.wu = wu;
     (e.blocks || []).forEach(function (b) {
       var p = (b.powt || []).filter(function (x) { return x != null; });
-      var blk = { c: b.slot < 4 ? 'palce' : 'silka', n: b.cwiczenie, p: p };
+      var blk = { c: b.slot < 8 ? 'palce' : 'silka', n: b.cwiczenie, p: p };
       if (b.komentarz) blk.k = b.komentarz;
       if (b.kg != null) blk.kg = b.kg;
       var kgs = (b.kgs || []).slice(0, p.length); if (kgs.some(function (x) { return x != null; })) blk.kgs = kgs;
@@ -417,14 +430,30 @@
     h += '<button type="button" data-new="1">+ Nowe ćwiczenie…</button>';
     $('#exlist').innerHTML = h;
   }
+  // Ćwiczenia z ostatnich 6 miesięcy (danej kategorii) — szybki wybór jednym dotknięciem,
+  // zanim w ogóle dotkniesz szukajki czy filtrów poniżej.
+  function renderExRecent(b) {
+    var names = recentNames(b.cat, 6);
+    if (!names.length) { $('#exrecent').innerHTML = ''; return; }
+    $('#exrecent').innerHTML = '<p class="lab">Ostatnie 6 miesięcy</p><div class="chips">' +
+      names.map(function (n) { return '<button type="button" data-name="' + esc(n) + '">' + esc(n) + '</button>'; }).join('') + '</div>';
+  }
+  function pickExName(b, name) {
+    $('#exdlg').close();
+    b.name = name; scheduleSave(); rerender(b);
+  }
   function openExPicker(b) {
     exPickBlock = b; exFilters = {};
     $('#exq').value = '';
-    renderExFilters(b); renderExList(b);
+    renderExRecent(b); renderExFilters(b); renderExList(b);
     $('#exdlg').showModal();
     setTimeout(function () { $('#exq').focus(); }, 50);
   }
   $('#exq').addEventListener('input', function () { if (exPickBlock) renderExList(exPickBlock); });
+  $('#exrecent').addEventListener('click', function (e) {
+    var t = e.target.closest('button[data-name]'); if (!t || !exPickBlock) return;
+    pickExName(exPickBlock, t.dataset.name);
+  });
   $('#exfilters').addEventListener('click', function (e) {
     var t = e.target.closest('button[data-k]'); if (!t || !exPickBlock) return;
     var k = t.dataset.k, v = t.dataset.v;
@@ -434,9 +463,8 @@
   $('#exlist').addEventListener('click', function (e) {
     var t = e.target.closest('button'); if (!t || !exPickBlock) return;
     var b = exPickBlock;
-    $('#exdlg').close();
-    if (t.dataset.new) { var el = blockEl(b.id), ne = $('.newex', el); ne.hidden = false; $('.newname', el).focus(); return; }
-    b.name = t.dataset.name; scheduleSave(); rerender(b);
+    if (t.dataset.new) { $('#exdlg').close(); var el = blockEl(b.id), ne = $('.newex', el); ne.hidden = false; $('.newname', el).focus(); return; }
+    pickExName(b, t.dataset.name);
   });
 
   /* ---------- add exercise ---------- */
@@ -461,7 +489,7 @@
   /* ---------- build entry ---------- */
   function focusVal(v, other) { return v === '__other' ? (other || '').trim() : v; }
   function buildEntry() {
-    var slotBase = { palce: 0, silka: 4 }, used = { palce: 0, silka: 0 }, blocks = [], err = null;
+    var slotBase = { palce: 0, silka: 8 }, used = { palce: 0, silka: 0 }, blocks = [], err = null;
     state.blocks.forEach(function (b) {
       var sets = [];
       b.sets.forEach(function (s, i) { if (String(s.reps).trim() !== '') sets.push({ reps: num(s.reps), kg: wt(b, i) }); });
@@ -747,7 +775,7 @@
   }
   window.LT = {
     $: $, $$: $$, esc: esc, num: num, fmt: fmt, today: today, toast: toast, plural: plural,
-    trainings: trainings, plan: function () { return DATA && DATA.plan; }, dataAt: function () { return DATA && DATA.at; },
+    trainings: trainings, recentNames: recentNames, plan: function () { return DATA && DATA.plan; }, dataAt: function () { return DATA && DATA.at; },
     planned: function () { return planned; }, setPlanned: function (a) { planned = a; lsSet('lt-planned', planned); pushState(); },
     go: showView, register: function (n, f) { LTR[n] = f; }, startTraining: startTraining, openSettings: openSettings, configured: configured, refresh: refreshData
   };

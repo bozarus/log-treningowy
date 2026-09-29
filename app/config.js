@@ -1,9 +1,16 @@
 /* Konfiguracja aplikacji: listy opcji z formularza Google i układ arkusza.
    Tu edytujesz domyślne listy ćwiczeń i opcji. Zmiany widać po odświeżeniu aplikacji. */
 window.LT_CONFIG = {
-  version: '2026.09.28-10',   // numer wersji (zmieniany przy każdym wydaniu razem z sw.js)
+  version: '2026.09.29-3',   // numer wersji (zmieniany przy każdym wydaniu razem z sw.js)
   // Co nowego: najnowsza wersja na górze. "v" to tylko etykieta widoczna w apce (nie musi być identyczna z "version" wyżej).
   changelog: [
+    { v: '29.09.2026', items: [
+      'Palce: limit podniesiony z 4 do 8 ćwiczeń w jednym treningu (arkusz ma teraz 8 bloków Palce + 8 Siłka zamiast 4+8).',
+      'Wybór ćwiczenia (Palce): dodane 24 brakujące ćwiczenia/warianty z historii (m.in. Max Hangs 2p/3p/b3, Density 2p/3p, Front 3, Back2) — filtr „Liczba palców” pokazuje teraz też 2p/3p/b3, nie tylko 4p.',
+      'Wybór ćwiczenia (Palce): nowy filtr „Urządzenie” rozróżnia teraz Chwytkę (jedna ręka, pin) od chwytotablic (BM2K, dom, mini — krawądki <14mm) i deski campusowej.',
+      'Wybór ćwiczenia (Trening): na górze okna wyboru pokazuje się lista ćwiczeń użytych choć raz w ostatnich 6 miesiącach — jeden dotyk zamiast przeklikiwania filtrów.',
+      'Historia (lista i Wykres): też dostały szybki wybór „Ostatnie 6 miesięcy” — w liście zawęża do treningów z dokładnie tym ćwiczeniem, w Wykresie od razu wybiera je do serii danych.'
+    ] },
     { v: '28.09.2026', items: [
       'Filtry: rząd (np. Urządzenie) nie znika już, gdy zostaje tylko jedna opcja — widać go i można go kliknąć.',
       'Wybór ćwiczenia (Palce): dodany filtr „Urządzenie” (np. BM2K, dom) obok Ćwiczenie/Liczba palców/Chwyt/Krawądka — działa też w Historii i Wykresie.',
@@ -24,7 +31,31 @@ window.LT_CONFIG = {
       'Max Hangs 4p open 20mm',
       'Density 4p 15mm',
       'Pulls 3p open',
-      'Pulls 4p open 17mm'
+      'Pulls 4p open 17mm',
+      'Max Hangs 3p half crimp asym',
+      'Max Hangs 3p open 20mm',
+      'Max Hangs 4p half crimp 12mm',
+      'Max Hangs 4p open 12mm',
+      'Max Hangs 4p open 33mm',
+      'Max Hangs 4p open 9mm',
+      'Max Hangs b3 half crimp asym',
+      'Density 2p open asym',
+      'Density 3p open asym',
+      'Density 3p 15mm',
+      'Density 3p (bez środkowego) 12mm',
+      'Density 4p 12mm',
+      'Front 3 half asym',
+      'Back2 14mm',
+      'Max Hangs 2p 12mm',
+      'Board Crawl',
+      'Campus',
+      'Campus na chwytach',
+      'Density ścisk',
+      'Pinch',
+      'Szmata z gumą',
+      'Wytrzymałość na campusie',
+      'Ćwiczenia RFD na campus',
+      'Ścicki/kompresja Volt'
     ],
     silka: [
       'Wyciskanie sztangi płasko',
@@ -105,8 +136,8 @@ window.LT_CONFIG = {
   // Rozbicie nazw ćwiczeń Palce na cechy (do filtrowania w wyborze ćwiczenia). Ćwiczenia spoza
   // tej listy (dodane własnoręcznie) nie mają cech — nie zostaną odfiltrowane, gdy nic nie wybierzesz.
   palceFacets: {
-    "Max Hangs 4p open 10mm": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "open", krawadka: "10mm", urzadzenie: "dom" },
-    "Max Hangs 4p open 8mm": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "open", krawadka: "8mm", urzadzenie: null },
+    "Max Hangs 4p open 10mm": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "open", krawadka: "10mm", urzadzenie: "mini" },
+    "Max Hangs 4p open 8mm": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "open", krawadka: "8mm", urzadzenie: "mini" },
     "Pulls 3p open": { cwiczenie: "Pulls", liczba: "3p", chwyt: "open", krawadka: null, urzadzenie: null },
     "Pulls 4p open asym": { cwiczenie: "Pulls", liczba: "4p", chwyt: "open", krawadka: "asym", urzadzenie: null },
     "Max Hangs 4p half crimp asym": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "half crimp", krawadka: "asym", urzadzenie: null },
@@ -119,13 +150,13 @@ window.LT_CONFIG = {
     "Repeaters 6:10 b3 half crimp asym": { cwiczenie: "Repeaters 6:10", liczba: "b3", chwyt: "half crimp", krawadka: "asym", urzadzenie: null },
     "Repeaters 6:10 3p (bez środkowego) half crimp asym": { cwiczenie: "Repeaters 6:10", liczba: "3p (bez środkowego)", chwyt: "half crimp", krawadka: "asym", urzadzenie: null },
     "Repeaters 6:10 4p half crimp 17mm": { cwiczenie: "Repeaters 6:10", liczba: "4p", chwyt: "half crimp", krawadka: "17mm", urzadzenie: null },
-    "Repeaters 7:3 4p open Campus XL": { cwiczenie: "Repeaters 7:3", liczba: "4p", chwyt: "open", krawadka: "Campus XL", urzadzenie: null },
+    "Repeaters 7:3 4p open Campus XL": { cwiczenie: "Repeaters 7:3", liczba: "4p", chwyt: "open", krawadka: "Campus XL", urzadzenie: "campus" },
     "Repeaters 7:3 3p open asym": { cwiczenie: "Repeaters 7:3", liczba: "3p", chwyt: "open", krawadka: "asym", urzadzenie: null },
     "Repeaters 7:3 4p open asym": { cwiczenie: "Repeaters 7:3", liczba: "4p", chwyt: "open", krawadka: "asym", urzadzenie: null },
     "Repeaters 7:3 3p (bez środkowego) half crimp asym": { cwiczenie: "Repeaters 7:3", liczba: "3p (bez środkowego)", chwyt: "half crimp", krawadka: "asym", urzadzenie: null },
     "Max Hangs 4p open 20mm": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "open", krawadka: "20mm", urzadzenie: "BM2K" },
-    "Campus po drewnie": { cwiczenie: "Campus po drewnie", liczba: null, chwyt: null, krawadka: null, urzadzenie: null },
-    "Campus z ziemi": { cwiczenie: "Campus z ziemi", liczba: null, chwyt: null, krawadka: null, urzadzenie: null },
+    "Campus po drewnie": { cwiczenie: "Campus po drewnie", liczba: null, chwyt: null, krawadka: null, urzadzenie: "campus" },
+    "Campus z ziemi": { cwiczenie: "Campus z ziemi", liczba: null, chwyt: null, krawadka: null, urzadzenie: "campus" },
     "Density 4p 15mm": { cwiczenie: "Density", liczba: "4p", chwyt: null, krawadka: "15mm", urzadzenie: "dom" },
     "Density 4p 20mm": { cwiczenie: "Density", liczba: "4p", chwyt: null, krawadka: "20mm", urzadzenie: "dom" },
     "Density 4p half crimp 17mm": { cwiczenie: "Density", liczba: "4p", chwyt: "half crimp", krawadka: "17mm", urzadzenie: null },
@@ -135,7 +166,31 @@ window.LT_CONFIG = {
     "Max Hangs 4p half crimp 17mm": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "half crimp", krawadka: "17mm", urzadzenie: null },
     "Pulls 4p open 17mm": { cwiczenie: "Pulls", liczba: "4p", chwyt: "open", krawadka: "17mm", urzadzenie: null },
     "Pulls 4p half crimp 17mm": { cwiczenie: "Pulls", liczba: "4p", chwyt: "half crimp", krawadka: "17mm", urzadzenie: null },
-    "Wrist wrench": { cwiczenie: "Wrist wrench", liczba: null, chwyt: null, krawadka: null, urzadzenie: null }
+    "Wrist wrench": { cwiczenie: "Wrist wrench", liczba: null, chwyt: null, krawadka: null, urzadzenie: null },
+    "Max Hangs 3p half crimp asym": { cwiczenie: "Max Hangs", liczba: "3p", chwyt: "half crimp", krawadka: "asym", urzadzenie: null },
+    "Max Hangs 3p open 20mm": { cwiczenie: "Max Hangs", liczba: "3p", chwyt: "open", krawadka: "20mm", urzadzenie: null },
+    "Max Hangs 4p half crimp 12mm": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "half crimp", krawadka: "12mm", urzadzenie: "mini" },
+    "Max Hangs 4p open 12mm": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "open", krawadka: "12mm", urzadzenie: "mini" },
+    "Max Hangs 4p open 33mm": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "open", krawadka: "33mm", urzadzenie: "BM2K" },
+    "Max Hangs 4p open 9mm": { cwiczenie: "Max Hangs", liczba: "4p", chwyt: "open", krawadka: "9mm", urzadzenie: "mini" },
+    "Max Hangs b3 half crimp asym": { cwiczenie: "Max Hangs", liczba: "b3", chwyt: "half crimp", krawadka: "asym", urzadzenie: "Chwytka" },
+    "Density 2p open asym": { cwiczenie: "Density", liczba: "2p", chwyt: "open", krawadka: "asym", urzadzenie: "Chwytka" },
+    "Density 3p open asym": { cwiczenie: "Density", liczba: "3p", chwyt: "open", krawadka: "asym", urzadzenie: null },
+    "Density 3p 15mm": { cwiczenie: "Density", liczba: "3p", chwyt: null, krawadka: "15mm", urzadzenie: null },
+    "Density 3p (bez środkowego) 12mm": { cwiczenie: "Density", liczba: "3p (bez środkowego)", chwyt: null, krawadka: "12mm", urzadzenie: "Chwytka" },
+    "Density 4p 12mm": { cwiczenie: "Density", liczba: "4p", chwyt: null, krawadka: "12mm", urzadzenie: "Chwytka" },
+    "Front 3 half asym": { cwiczenie: "Front 3", liczba: "3p", chwyt: "half crimp", krawadka: "asym", urzadzenie: "Chwytka" },
+    "Back2 14mm": { cwiczenie: "Back2", liczba: "2p", chwyt: null, krawadka: "14mm", urzadzenie: "Chwytka" },
+    "Max Hangs 2p 12mm": { cwiczenie: "Max Hangs", liczba: "2p", chwyt: null, krawadka: "12mm", urzadzenie: "Chwytka" },
+    "Board Crawl": { cwiczenie: "Board Crawl", liczba: null, chwyt: null, krawadka: null, urzadzenie: null },
+    "Campus": { cwiczenie: "Campus", liczba: null, chwyt: null, krawadka: null, urzadzenie: "campus" },
+    "Campus na chwytach": { cwiczenie: "Campus na chwytach", liczba: null, chwyt: null, krawadka: null, urzadzenie: null },
+    "Density ścisk": { cwiczenie: "Density ścisk", liczba: null, chwyt: null, krawadka: null, urzadzenie: null },
+    "Pinch": { cwiczenie: "Pinch", liczba: null, chwyt: null, krawadka: null, urzadzenie: "Chwytka" },
+    "Szmata z gumą": { cwiczenie: "Szmata z gumą", liczba: null, chwyt: null, krawadka: null, urzadzenie: null },
+    "Wytrzymałość na campusie": { cwiczenie: "Wytrzymałość na campusie", liczba: null, chwyt: null, krawadka: null, urzadzenie: "campus" },
+    "Ćwiczenia RFD na campus": { cwiczenie: "Ćwiczenia RFD na campus", liczba: null, chwyt: null, krawadka: null, urzadzenie: "campus" },
+    "Ścicki/kompresja Volt": { cwiczenie: "Ścicki/kompresja Volt", liczba: null, chwyt: null, krawadka: null, urzadzenie: null }
   },
   // Grupa ćwiczeń Siłka (do filtrowania w wyborze ćwiczenia). Spoza tej listy = "Inne".
   silkaGroups: {
@@ -150,7 +205,7 @@ window.LT_CONFIG = {
   // Od reorganizacji nazw (wrzesień 2026) nowe nazwy ćwiczeń Palce nie mają już strony w nazwie
   // (to była osobna kolumna/wybór w apce), więc wszystko dostaje zwykłe " prawa" / " lewa".
   sideSuffix: {},
-  limits: { palce: 4, silka: 8 },
+  limits: { palce: 8, silka: 8 },
   maxSets: 8,
   trainingTypes: ['Wspin', 'Palce', 'Siłka', 'Skały'],
   drills: [

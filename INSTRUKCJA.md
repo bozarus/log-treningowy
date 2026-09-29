@@ -31,6 +31,16 @@ Hosting aplikacji (gdzie ma stać pod adresem www) wybierzesz na końcu, w czę�
 
 **Uwaga:** przesunięcie kolumn poprawi się samo we wzorach w obrębie zakładki „Dane”. Wykresy, Dashboard, „Podsumowanie” i skrypty, które odwołują się do liter kolumn, mogą wymagać poprawek. Zrobimy je razem, na kopii.
 
+## C2. Rozszerz limit „Palce” z 4 do 8 (raz, wrzesień 2026)
+
+Aplikacja pozwala teraz na 8 ćwiczeń „Palce” w jednym treningu (wcześniej 4). Wymaga to jednorazowej zmiany w arkuszu — rób to PO kroku C (`dodajKolumnyKg` musi być już uruchomione):
+
+1. W edytorze Apps Script podmień cały kod na aktualną zawartość `apps-script/Code.gs` (ma teraz też funkcję `rozszerzBlokiPalce`). Zapisz.
+2. Wybierz funkcję **`rozszerzBlokiPalce`** i kliknij **Uruchom**.
+3. Skrypt wstawia 4 nowe bloki (84 kolumny) zaraz po dotychczasowym 4. bloku „Palce”. Dawne bloki „Siłka” (5–12) przesuwają się na pozycje 9–16 — same dane nie są ruszane, tylko przesuwają się razem z kolumnami. Arkusz ma po tym 369 kolumn zamiast 285. Jeśli coś się nie zgadza z oczekiwanym układem, skrypt niczego nie zmienia i pisze dlaczego.
+4. Wdróż na nowo skrypt jako aplikację internetową (krok D poniżej — **Wdróż > Zarządzaj wdrożeniami > ołówek > Nowa wersja**), żeby zmiany w kodzie zaczęły działać.
+5. Sprawdź Dashboard/Podsumowanie/wykresy — jeśli odwołują się do konkretnych liter kolumn (a nie tylko do zakładki „Dane” jako całości), mogą wymagać poprawek po przesunięciu bloków Siłka.
+
 ## D. Wdróż skrypt i opublikuj aplikację
 
 **Wdrożenie skryptu:**
