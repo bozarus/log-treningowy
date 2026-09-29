@@ -424,19 +424,18 @@
   }
   function renderExList(b) {
     var q = $('#exq').value.trim().toLowerCase();
-    var names = allNamesFor(b.cat).filter(function (n) { return exMatches(b, n, q); });
-    var h = names.map(function (n) { return '<button type="button" data-name="' + esc(n) + '">' + esc(n) + '</button>'; }).join('');
+    // Dopóki nie wybrano żadnej zmiennej filtra i nic nie wpisano w szukajkę, pokaż jako
+    // domyślną listę tylko ćwiczenia użyte w ostatnich 6 mies. — po wybraniu zmiennej (albo
+    // wpisaniu szukanej frazy) lista przełącza się na normalne kaskadowe dopasowanie z całej historii.
+    var noFilter = !q && !Object.keys(exFilters).length;
+    var pool = noFilter ? recentNames(b.cat, 6) : allNamesFor(b.cat);
+    if (noFilter && !pool.length) pool = allNamesFor(b.cat);
+    var names = pool.filter(function (n) { return exMatches(b, n, q); });
+    var h = (noFilter ? '<p class="lab">Ostatnie 6 miesięcy</p>' : '') +
+      names.map(function (n) { return '<button type="button" data-name="' + esc(n) + '">' + esc(n) + '</button>'; }).join('');
     if (!names.length) h += '<p class="exempty">Nic nie pasuje — spróbuj mniej filtrów.</p>';
     h += '<button type="button" data-new="1">+ Nowe ćwiczenie…</button>';
     $('#exlist').innerHTML = h;
-  }
-  // Ćwiczenia z ostatnich 6 miesięcy (danej kategorii) — szybki wybór jednym dotknięciem,
-  // zanim w ogóle dotkniesz szukajki czy filtrów poniżej.
-  function renderExRecent(b) {
-    var names = recentNames(b.cat, 6);
-    if (!names.length) { $('#exrecent').innerHTML = ''; return; }
-    $('#exrecent').innerHTML = '<p class="lab">Ostatnie 6 miesięcy</p><div class="chips">' +
-      names.map(function (n) { return '<button type="button" data-name="' + esc(n) + '">' + esc(n) + '</button>'; }).join('') + '</div>';
   }
   function pickExName(b, name) {
     $('#exdlg').close();
@@ -445,15 +444,11 @@
   function openExPicker(b) {
     exPickBlock = b; exFilters = {};
     $('#exq').value = '';
-    renderExRecent(b); renderExFilters(b); renderExList(b);
+    renderExFilters(b); renderExList(b);
     $('#exdlg').showModal();
     setTimeout(function () { $('#exq').focus(); }, 50);
   }
   $('#exq').addEventListener('input', function () { if (exPickBlock) renderExList(exPickBlock); });
-  $('#exrecent').addEventListener('click', function (e) {
-    var t = e.target.closest('button[data-name]'); if (!t || !exPickBlock) return;
-    pickExName(exPickBlock, t.dataset.name);
-  });
   $('#exfilters').addEventListener('click', function (e) {
     var t = e.target.closest('button[data-k]'); if (!t || !exPickBlock) return;
     var k = t.dataset.k, v = t.dataset.v;

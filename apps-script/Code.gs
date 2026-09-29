@@ -608,6 +608,216 @@ function zapiszBackupNazwPalce_(log) {
 }
 
 
+// ====== JEDNORAZOWA MIGRACJA 2: korekta nazw „Palce” po arkuszu korekty (2026-09) ======
+// Po rozszerzeniu na 8 bloków Palce i po Twoich poprawkach w arkuszu korekty (usunięcie tagów
+// urządzenia typu "(Chwytka)"/"(Dom)"/"(BM2K)" z nazwy, ujednolicenie kilku wariantów w jedną
+// nazwę). Sprawdza WSZYSTKIE bloki Palce (1-8, bo już po rozszerzeniu), nie tylko pierwsze 4.
+// Bloki Siłka nie są ruszane. Stare nazwy trafiają do osobnej zakładki "Backup nazw (palce) 2".
+
+const RENAME_MAP_PALCE2 = {
+  "2p 12mm lewa (Chwytka)": "Max Hangs 2p open 12mm lewa",
+  "Back2 14mm lewa": "Max Hangs b2 open 14mm lewa",
+  "Back2 14mm prawa": "Max Hangs b2 open 14mm prawa",
+  "Campus po drewnie": "Campus",
+  "Campus z ziemi": "RFD na campus",
+  "Density 3p (no fuck) 12mm prawa": "Density 3p (no fuck) open 12mm prawa",
+  "Density 3p 15mm": "Density 3p open 15mm",
+  "Density 4p 12mm lewa": "Density 4p open 12mm lewa",
+  "Density 4p 12mm prawa (Chwytka)": "Density 4p open 12mm prawa",
+  "Density 4p 15mm": "Density 4p open 15mm",
+  "Density 4p 20mm": "Density 4p open 20mm",
+  "Density ścisk prawa": "Density Pinch prawa",
+  "Front 3 half asym lewa (Chwytka)": "Max Hangs f3 half asym lewa",
+  "Max Hangs 3p half crimp asym lewa (Chwytka)": "Max Hangs 3p half crimp asym lewa",
+  "Max Hangs 4p open 10mm (Dom)": "Max Hangs 4p open 10mm",
+  "Max Hangs 4p open 12mm (Dom)": "Max Hangs 4p open 12mm",
+  "Max Hangs 4p open 15mm (Dom)": "Max Hangs 4p open 15mm",
+  "Max Hangs 4p open 20mm (BM2K)": "Max Hangs 4p open 20mm",
+  "Max Hangs 4p open 33mm lewa (BM2K)": "Max Hangs 4p open 33mm lewa",
+  "Max Hangs 4p open 33mm prawa (BM2K)": "Max Hangs 4p open 33mm prawa",
+  "Max Hangs 4p open 8mm (Dom)": "Max Hangs 4p open 8mm",
+  "Max Hangs 4p open 9mm (Dom)": "Max Hangs 4p open 9mm",
+  "Max Hangs b3 half crimp asym lewa (Chwytka)": "Max Hangs b3 half crimp asym lewa",
+  "Max Hangs b3 half crimp asym prawa (Chwytka)": "Max Hangs b3 half crimp asym prawa",
+  "Pinch lewa (Chwytka)": "Max Hangs Pinch lewa",
+  "Pinch prawa (Chwytka)": "Max Hangs Pinch prawa",
+  "Repeaters 6:10 3p (bez środkowego) half crimp asym": "Repeaters 6:10 3p (no fuck) half crimp asym",
+  "Repeaters 7:3 3p (bez środkowego) half crimp asym": "Repeaters 7:3 3p (no fuck) half crimp asym",
+  "Repeaters 7:3 3p open 12mm (Chwytka)": "Repeaters 7:3 3p open 12mm",
+  "Repeaters 7:3 3p open 8mm (Chwytka)": "Repeaters 7:3 3p open 8mm",
+  "Repeaters 7:3 4p open 10mm (Chwytka)": "Repeaters 7:3 4p open 10mm",
+  "Repeaters 7:3 4p open 8mm (Chwytka)": "Repeaters 7:3 4p open 8mm",
+  "Wytrzymałość na campusie": "PE na campusie",
+  "Ćwiczenia RFD na campus": "RFD na campus",
+  "Ścicki/kompresja Volt": "Pinch kompresja Volt"
+};
+
+/** Podgląd: nic nie zapisuje, tylko liczy i pokazuje w Logger.log, co by się zmieniło. Uruchom NAJPIERW to. */
+function zmienNazwyPalce2Podglad() { zmienNazwyPalce2_(true); }
+/** Zapis: zmienia nazwy w "Dane" (wszystkie 8 bloków Palce) i tworzy zakładkę "Backup nazw (palce) 2". Uruchom PO podglądzie. */
+function zmienNazwyPalce2() { zmienNazwyPalce2_(false); }
+
+function zmienNazwyPalce2_(dry) {
+  const sh = sheet_();
+  const lay = layoutStatus_(sh);
+  if (lay !== 'ok') throw new Error(lay);
+  const last = lastRow_(sh);
+  if (last < 2) { Logger.log('Brak wierszy w "Dane".'); return; }
+  const nRows = last - 1;
+  const data = sh.getRange(2, 1, nRows, TOTAL_COLS).getValues();
+  const log = [];          // [wiersz w Dane, blok 1-8, stara nazwa, nowa nazwa]
+  const nieznane = {};     // nazwy, których nie ma w mapie — nic z nimi nie robimy (w tym też Density ścisk/Pinch/Board Crawl/Campus na chwytach/Max Hangs 4p open 9mm zalogowane w blokach Siłka — te NIE są tu ruszane, bo migracja dotyczy tylko bloków Palce)
+  let zmienione = 0;
+
+  for (let b = 0; b < N_PALCE; b++) {          // wszystkie bloki Palce (0-7, już po rozszerzeniu do 8)
+    const s = BLOCK_START + b * BLOCK_W;       // 0-indeksowana pozycja "Ćwiczenie" w tym bloku
+    for (let r = 0; r < nRows; r++) {
+      const row = data[r];
+      const stara = String(row[s] || '').trim();
+      if (!stara) continue;
+      if (!Object.prototype.hasOwnProperty.call(RENAME_MAP_PALCE2, stara)) { continue; }
+      const nowa = RENAME_MAP_PALCE2[stara];
+      if (nowa === stara) continue;
+      log.push([r + 2, b + 1, stara, nowa]);
+      if (!dry) row[s] = nowa;
+      zmienione++;
+    }
+  }
+
+  if (!dry && log.length) {
+    for (let b = 0; b < N_PALCE; b++) {
+      const s = BLOCK_START + b * BLOCK_W;
+      const col = [];
+      for (let r = 0; r < nRows; r++) col.push([data[r][s]]);
+      sh.getRange(2, s + 1, nRows, 1).setValues(col);
+    }
+    zapiszBackupNazwPalce2_(log);
+  }
+
+  Logger.log(
+    (dry ? 'PODGLĄD (nic nie zapisano): ' : 'ZAPISANO: ') +
+    'komórek do zmiany: ' + zmienione + ' (na ' + RENAME_MAP_PALCE2_COUNT_ + ' nazw w mapie).'
+  );
+}
+const RENAME_MAP_PALCE2_COUNT_ = Object.keys(RENAME_MAP_PALCE2).length;
+
+function zapiszBackupNazwPalce2_(log) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const name = 'Backup nazw (palce) 2';
+  let sh = ss.getSheetByName(name);
+  if (sh) ss.deleteSheet(sh);
+  sh = ss.insertSheet(name);
+  sh.getRange(1, 1, 1, 4).setValues([['Wiersz w "Dane"', 'Blok (1-8)', 'Stara nazwa', 'Nowa nazwa']]);
+  sh.getRange('A1:D1').setFontWeight('bold');
+  if (log.length) sh.getRange(2, 1, log.length, 4).setValues(log);
+  sh.autoResizeColumns(1, 4);
+}
+
+
+// ====== JEDNORAZOWA MIGRACJA 3: przenieś ćwiczenia Palce zalogowane w bloku Siłka (2026-09) ======
+// Kilka ćwiczeń Palce trafiło historycznie do bloku Siłka (prawdopodobnie z braku wolnego
+// miejsca w Palcach, sprzed rozszerzenia limitu do 8). Ta migracja przenosi CAŁY blok (nazwa,
+// komentarz, Kg, Kg s1-s8, Rest, Powt 1-8) z bloku Siłka do pierwszego WOLNEGO bloku Palce w tym
+// samym wierszu i nadaje mu poprawną nazwę. Jeśli w danym wierszu wszystkie 8 bloków Palce są
+// już zajęte, ten wiersz jest pomijany (nic nie nadpisujemy) i widać to w dzienniku.
+// "Szmata z gumą" NIE jest tu ruszana - zostaje w Siłce (tak zdecydowano), tylko już bez
+// zmian - jej warianty "prawa"/"lewa" i tak grupują się razem jak każde inne ćwiczenie z ręką
+// w nazwie (np. "Wiosłowanie jednorącz").
+
+const MOVE_MAP_PALCE_Z_SILKI = {
+  "Density ścisk lewa": "Density Pinch lewa",
+  "Density ścisk prawa": "Density Pinch prawa",
+  "Pinch lewa (Chwytka)": "Max Hangs Pinch lewa",
+  "Campus na chwytach": "Campus na chwytach",
+  "Max Hangs 4p open 9mm": "Max Hangs 4p open 9mm",
+  "Board Crawl": "Board Crawl"
+};
+
+/** Podgląd: nic nie zapisuje, tylko liczy i pokazuje w Logger.log, co by się przeniosło. Uruchom NAJPIERW to. */
+function przeniesPalceZSilkiPodglad() { przeniesPalceZSilki_(true); }
+/** Zapis: przenosi bloki z Siłki do Palców i tworzy zakładkę "Backup przeniesień (Palce z Siłki)". Uruchom PO podglądzie. */
+function przeniesPalceZSilki() { przeniesPalceZSilki_(false); }
+
+function przeniesPalceZSilki_(dry) {
+  const sh = sheet_();
+  const lay = layoutStatus_(sh);
+  if (lay !== 'ok') throw new Error(lay);
+  const last = lastRow_(sh);
+  if (last < 2) { Logger.log('Brak wierszy w "Dane".'); return; }
+  const nRows = last - 1;
+  const data = sh.getRange(2, 1, nRows, TOTAL_COLS).getValues();
+  const log = [];          // [wiersz w Dane, stary blok Siłka (9-16), nowy blok Palce (1-8), stara nazwa, nowa nazwa]
+  const pominiete = [];    // [wiersz w Dane, nazwa] - brak wolnego bloku Palce w tym wierszu
+  let przeniesione = 0;
+
+  for (let r = 0; r < nRows; r++) {
+    const row = data[r];
+    // Blokady Palce zajęte przez ten wiersz - liczone od zera przy każdym wierszu i aktualizowane
+    // na bieżąco, także w trybie podglądu, żeby DWA przenoszone wpisy w tym samym wierszu (np.
+    // "Density ścisk prawa" i "Density ścisk lewa" zalogowane tego samego dnia) trafiły w dwa
+    // RÓŻNE wolne bloki, a nie oba w ten sam.
+    const zajete = [];
+    for (let b2 = 0; b2 < N_PALCE; b2++) {
+      const s2check = BLOCK_START + b2 * BLOCK_W;        // 0-indeksowana pozycja "Ćwiczenie" tego bloku
+      zajete[b2] = String(row[s2check] || '').trim() !== '';
+    }
+
+    for (let b = N_PALCE; b < N_BLOCKS; b++) {           // bloki Siłka (8-15, czyli 9-16 w numeracji od 1) - WSZYSTKIE, nie przerywamy po pierwszym trafieniu
+      const s = BLOCK_START + b * BLOCK_W;               // 0-indeksowana pozycja "Ćwiczenie" tego bloku (tak jak w zmienNazwyPalce2_)
+      const stara = String(row[s] || '').trim();
+      if (!stara || !Object.prototype.hasOwnProperty.call(MOVE_MAP_PALCE_Z_SILKI, stara)) continue;
+      const nowa = MOVE_MAP_PALCE_Z_SILKI[stara];
+
+      let wolny = -1;
+      for (let b2 = 0; b2 < N_PALCE; b2++) {             // pierwszy wolny blok Palce (0-7), z uwzględnieniem już przydzielonych w tym wierszu
+        if (!zajete[b2]) { wolny = b2; break; }
+      }
+      if (wolny === -1) { pominiete.push([r + 2, stara]); continue; }
+      zajete[wolny] = true;                              // ten slot jest teraz zajęty, dla kolejnych trafień w tym samym wierszu
+
+      const s2 = BLOCK_START + wolny * BLOCK_W;
+      log.push([r + 2, b + 1, wolny + 1, stara, nowa]);
+      if (!dry) {
+        // Blok to 20 kolumn od "Ćwiczenie" (s) do ostatniego "Powt./sek." (s+19); "Przejdź do
+        // sekcji" (s-1) jest wspólne dla wszystkich bloków i zawsze puste - nie ruszamy go.
+        for (let k = 0; k <= 19; k++) row[s2 + k] = row[s + k];    // skopiuj cały blok (Ćwiczenie, Komentarz, Kg, Kg s1-8, Rest, Powt 1-8)
+        row[s2] = nowa;                                             // nadaj poprawną nazwę w nowym miejscu
+        for (let k = 0; k <= 19; k++) row[s + k] = '';              // wyczyść stary blok Siłka
+      }
+      przeniesione++;
+    }
+  }
+
+  if (!dry && log.length) {
+    sh.getRange(2, 1, nRows, TOTAL_COLS).setValues(data);
+    zapiszBackupPrzeniesienPalce_(log, pominiete);
+  }
+
+  const pominTxt = pominiete.map(function (p) { return 'wiersz ' + p[0] + ' („' + p[1] + '”)'; }).join(', ');
+  Logger.log(
+    (dry ? 'PODGLĄD (nic nie zapisano): ' : 'ZAPISANO: ') +
+    'przeniesionych wpisów: ' + przeniesione + '.' +
+    (pominiete.length ? ' POMINIĘTE (brak wolnego bloku Palce w tym wierszu): ' + pominTxt : ' Nic nie pominięto.')
+  );
+}
+
+function zapiszBackupPrzeniesienPalce_(log, pominiete) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const name = 'Backup przeniesień (Palce z Siłki)';
+  let sh = ss.getSheetByName(name);
+  if (sh) ss.deleteSheet(sh);
+  sh = ss.insertSheet(name);
+  sh.getRange(1, 1, 1, 5).setValues([['Wiersz w "Dane"', 'Stary blok Siłka (9-16)', 'Nowy blok Palce (1-8)', 'Stara nazwa', 'Nowa nazwa']]);
+  sh.getRange('A1:E1').setFontWeight('bold');
+  if (log.length) sh.getRange(2, 1, log.length, 5).setValues(log);
+  if (pominiete.length) {
+    sh.getRange(log.length + 3, 1, 1, 2).setValues([['Pominięte (brak wolnego bloku Palce):', '']]);
+    sh.getRange(log.length + 4, 1, pominiete.length, 2).setValues(pominiete);
+  }
+  sh.autoResizeColumns(1, 5);
+}
+
+
 // ====== ODŚWIEŻENIE LISTY ĆWICZEŃ W DASHBOARD (rozwijane menu B2:C2, "Ćwiczenie 1"/"Ćwiczenie 2") ======
 // Ustawia obie listy na faktyczne nazwy ćwiczeń, jakie są teraz w zakładce "Dane"
 // (Palce już po migracji na nowe nazwy, Siłka bez zmian). Można uruchamiać wielokrotnie,

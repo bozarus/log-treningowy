@@ -41,6 +41,24 @@ Aplikacja pozwala teraz na 8 ćwiczeń „Palce” w jednym treningu (wcześniej
 4. Wdróż na nowo skrypt jako aplikację internetową (krok D poniżej — **Wdróż > Zarządzaj wdrożeniami > ołówek > Nowa wersja**), żeby zmiany w kodzie zaczęły działać.
 5. Sprawdź Dashboard/Podsumowanie/wykresy — jeśli odwołują się do konkretnych liter kolumn (a nie tylko do zakładki „Dane” jako całości), mogą wymagać poprawek po przesunięciu bloków Siłka.
 
+## C3. Popraw historyczne nazwy ćwiczeń „Palce” (raz, wrzesień 2026)
+
+Po korekcie nazw ćwiczeń (usunięte tagi typu „(Chwytka)”/„(Dom)”/„(BM2K)” z nazw, scalone warianty tego samego ćwiczenia) trzeba jednorazowo przemianować stare wpisy w arkuszu, żeby historia była spójna z nowymi filtrami. Rób to PO kroku C2 (`rozszerzBlokiPalce` musi być już uruchomione):
+
+1. W edytorze Apps Script podmień cały kod na aktualną zawartość `apps-script/Code.gs` (ma teraz też funkcje `zmienNazwyPalce2Podglad`/`zmienNazwyPalce2`). Zapisz.
+2. Wybierz funkcję **`zmienNazwyPalce2Podglad`** i kliknij **Uruchom**. Nic nie zapisuje — w **Widok > Dziennik wykonania** zobaczysz, ile komórek zostałoby zmienionych.
+3. Jeśli liczba wygląda rozsądnie, wybierz funkcję **`zmienNazwyPalce2`** i kliknij **Uruchom**. Zmienia nazwy we wszystkich 8 blokach „Palce” w zakładce „Dane” i zapisuje kopię starych/nowych nazw w nowej zakładce „Backup nazw (palce) 2” (nic nie kasuje).
+4. Wdróż na nowo skrypt jako aplikację internetową (krok D poniżej), żeby ewentualne inne zmiany w kodzie zaczęły działać.
+
+## C4. Przenieś ćwiczenia Palce zalogowane w bloku Siłka (raz, wrzesień 2026)
+
+Kilka ćwiczeń Palce trafiło historycznie do bloku „Siłka” (prawdopodobnie z braku wolnego miejsca w Palcach, sprzed rozszerzenia limitu do 8). Ta migracja przenosi cały blok (nazwa, ciężar, serie, powtórzenia) do wolnego bloku Palce w tym samym treningu. Rób to PO kroku C3:
+
+1. W edytorze Apps Script podmień cały kod na aktualną zawartość `apps-script/Code.gs` (ma teraz też funkcje `przeniesPalceZSilkiPodglad`/`przeniesPalceZSilki`). Zapisz.
+2. Wybierz funkcję **`przeniesPalceZSilkiPodglad`** i kliknij **Uruchom**. Nic nie zapisuje — w dzienniku wykonania zobaczysz, ile wpisów zostałoby przeniesionych i czy któryś trzeba by pominąć (gdyby akurat tamtego dnia wszystkie 8 slotów Palce było już zajęte).
+3. Jeśli wygląda dobrze, wybierz funkcję **`przeniesPalceZSilki`** i kliknij **Uruchom**. Przenosi wpisy i zapisuje szczegóły w nowej zakładce „Backup przeniesień (Palce z Siłki)” (nic nie kasuje bezpowrotnie).
+4. Wdróż na nowo skrypt jako aplikację internetową (krok D poniżej).
+
 ## D. Wdróż skrypt i opublikuj aplikację
 
 **Wdrożenie skryptu:**
